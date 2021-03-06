@@ -1,0 +1,5 @@
+string[] old_model_names
+flatland_msgs/Model[] new_models
+---
+bool success
+string message
