@@ -29,7 +29,9 @@ add_message_files(FILES
 
 add_service_files(FILES
   SpawnModel.srv
+  SpawnModels.srv
   DeleteModel.srv
+  DeleteModels.srv
   MoveModel.srv
   StepWorld.srv
 )
