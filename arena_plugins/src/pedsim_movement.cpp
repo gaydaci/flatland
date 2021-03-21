@@ -71,33 +71,28 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
 
 
 void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
-    // check if an update is REQUIRED
-    if (agents_ == NULL) { //!update_timer_.CheckUpdate(timekeeper) || 
+    if (agents_ == NULL) {
         return;
     }
-
     
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
-    // ROS_WARN("name space: %s",ns_str.c_str());
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
 
     //Find appropriate agent in list
     pedsim_msgs::AgentState person;
-    for (int i=0; i < agents_->agent_states.size(); i++){
+    for (int i = 0; i < agents_->agent_states.size(); i++){
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
-            // ROS_WARN("find agent: %d",id_);
             break;
         }
-    };
 
-    //Check if person was found
-    if (std::isnan(person.twist.linear.x)){
-        ROS_WARN("Couldn't find agent: %d", id_);
-        return;
-    }
+        if (i == agents_->agent_states.size() - 1)
+        {
+            ROS_WARN("Couldn't find agent: %d", id_);
+        }
+    };
 
     //Initialize agent
     if(init_== true){
@@ -107,10 +102,8 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     }
 
 
-    float vel_x =person.twist.linear.x;; //
-    // ROS_WARN("vel_x%f",vel_x);
-    float vel_y =person.twist.linear.y;; // 
-    // ROS_WARN("vel_y%f",vel_y);
+    float vel_x = person.twist.linear.x;
+    float vel_y = person.twist.linear.y;
     float angle_soll = atan2(vel_y, vel_x);
     float angle_ist = body_->GetAngle();
 

@@ -61,7 +61,6 @@ ServiceManager::ServiceManager(SimulationManager *sim_man, World *world)
       nh.advertiseService("spawn_model", &ServiceManager::SpawnModel, this);
   spawn_models_service_ =
       nh.advertiseService("spawn_models", &ServiceManager::SpawnModels, this);
-  // respawn_models_service_ = nh.advertiseService("respawn_models", &ServiceManager::RespawnModels, this);
   delete_model_service_ =
       nh.advertiseService("delete_model", &ServiceManager::DeleteModel, this);
   delete_models_service_ =
@@ -87,11 +86,11 @@ ServiceManager::ServiceManager(SimulationManager *sim_man, World *world)
     ROS_ERROR_NAMED("Service Manager", "Error starting model spawning service");
   }
 
-  // if (spawn_models_service_) {
-  //   ROS_INFO_NAMED("Service Manager", "Models spawning service ready to go");
-  // } else {
-  //   ROS_ERROR_NAMED("Service Manager", "Error starting models spawning service");
-  // }
+  if (spawn_models_service_) {
+    ROS_INFO_NAMED("Service Manager", "Models spawning service ready to go");
+  } else {
+    ROS_ERROR_NAMED("Service Manager", "Error starting models spawning service");
+  }
 
   if (delete_model_service_) {
     ROS_INFO_NAMED("Service Manager", "Model deleting service ready to go");
@@ -155,79 +154,6 @@ bool ServiceManager::SpawnModels(flatland_msgs::SpawnModels::Request &request,
   return true;
 }
 
-// bool ServiceManager::RespawnModels(flatland_msgs::RespawnModels::Request &request,
-//                                 flatland_msgs::RespawnModels::Response &response) {
-//   ROS_DEBUG_NAMED("ServiceManager",
-//                   "Respawning %d models", request.new_models.size());
-  
-//   ros::WallTime begin = ros::WallTime::now();
-//   response.success = true;
-//   response.message = "";
-
-//   //Check if there an enabled model that can be reused (== same model type).
-//   for(int i_new_model=0; i_new_model < request.new_models.size(); i_new_model++){
-//     flatland_msgs::Model model = request.new_models[i_new_model];
-//     Model* existing_model = NULL;
-//     for(int i_old_model=0; i_old_model < request.old_model_names.size(); i_old_model++){
-//       Model* old_model = world_->GetModel(request.old_model_names[i_old_model]);
-//       if (old_model == NULL){
-//         request.old_model_names.erase(request.old_model_names.begin() + i_old_model);
-//         continue;
-//       }
-//       if(old_model->GetYamlPath() == model.yaml_path && old_model->IsEnabled()){
-//         existing_model = old_model;
-//         request.old_model_names.erase(request.old_model_names.begin() + i_old_model);
-//         break;   
-//       }
-//     }
-     
-//     Pose pose(model.pose.x, model.pose.y, model.pose.theta);
-
-//     if(existing_model == NULL){
-//       //Check if there exist a disabled model
-//         for (const auto &world_model : world_->models_) {
-//           if(!world_model->IsEnabled() &&  world_model->GetYamlPath()== model.yaml_path){
-//             existing_model = world_model;
-//             existing_model->EnableModel();
-//             world_->plugin_manager_.ReconfigureModelPlugin(existing_model);
-//             break;
-//           }
-//         }
-//     }
-
-//     if(existing_model == NULL){
-//       //Create new model
-//       try {
-//         world_->LoadModel(model.yaml_path, model.ns, model.name, pose);
-//       } catch (const std::exception &e) {
-//         response.success = false;
-//         response.message = std::string(e.what());
-//         ROS_ERROR_NAMED("ServiceManager", "Failed to load model! Exception: %s",
-//                         e.what());
-//       }
-//     }else{
-//       //Simply move existing model
-//       try {
-//         existing_model->SetNameSpace(model.ns);
-//         world_->MoveModel(existing_model->GetName(), pose);
-//       } catch (const std::exception &e) {
-//         response.success = false;
-//         response.message = std::string(e.what());
-//       }
-//     }
-//   }
-
-//   //Disable remaining models
-//   //ToDO: Restrict to maximum number?
-//   for(int i_old_model=0; i_old_model < request.old_model_names.size(); i_old_model++){
-//       Model* old_model = world_->GetModel(request.old_model_names[i_old_model]);
-//       // if (old_model == NULL)
-//       //   continue;
-//       old_model->DisableModel();
-//   }
-//   return true;
-// }
-
 
 bool ServiceManager::DeleteModel(
     flatland_msgs::DeleteModel::Request &request,
@@ -252,7 +178,7 @@ bool ServiceManager::DeleteModels(
     flatland_msgs::DeleteModels::Response &response) {
 
   ros::WallTime start = ros::WallTime::now();
-  ROS_DEBUG_NAMED("ServiceManager", "Deleted %d models",
+  ROS_DEBUG_NAMED("ServiceManager", "Deleted %ld models",
                   request.name.size());
   response.success = true;
   response.message = "";
