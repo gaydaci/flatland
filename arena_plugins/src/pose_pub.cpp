@@ -76,7 +76,7 @@ void PosePub::OnInitialize(const YAML::Node& config) {
 
   // noise are in the form of linear x, linear y, angular variances
   // std::vector<double> odom_twist_noise =
-      // reader.GetList<double>("odom_twist_noise", {0, 0, 0}, 3, 3);
+  // reader.GetList<double>("odom_twist_noise", {0, 0, 0}, 3, 3);
   std::vector<double> odom_pose_noise =
       reader.GetList<double>("odom_pose_noise", {0, 0, 0}, 3, 3);
 
@@ -122,7 +122,9 @@ void PosePub::OnInitialize(const YAML::Node& config) {
   // }
 
   // init the values for the messages
-  ground_truth_msg_.header.frame_id = odom_frame_id;
+  // ground_truth_msg_.header.frame_id = odom_frame_id;
+  ground_truth_msg_.header.frame_id = 
+      tf::resolve("", GetModel()->NameSpaceTF(odom_frame_id));
   ground_truth_msg_.child_frame_id =
       tf::resolve("", GetModel()->NameSpaceTF(body_->name_));
   // ground_truth_msg_.twist.covariance.fill(0);
@@ -200,65 +202,15 @@ void PosePub::AfterPhysicsStep(const Timekeeper& timekeeper) {
 
     if (enable_odom_pub_) {
       ground_truth_pub_.publish(ground_truth_msg_);
-      odom_pub_.publish(odom_msg_);
+      // odom_pub_.publish(odom_msg_);
     }
-
-    // if (enable_twist_pub_) {
-    //   // Transform global frame velocity into local frame to simulate encoder
-    //   // readings
-    //   geometry_msgs::TwistStamped twist_pub_msg;
-    //   twist_pub_msg.header.stamp = timekeeper.GetSimTime();
-    //   twist_pub_msg.header.frame_id = odom_msg_.child_frame_id;
-
-    //   // Forward velocity in twist.linear.x
-    //   twist_pub_msg.twist.linear.x = cos(angle) * linear_vel_local.x +
-    //                                  sin(angle) * linear_vel_local.y +
-    //                                  noise_gen_[3](rng_);
-
-    //   // Angular velocity in twist.angular.z
-    //   twist_pub_msg.twist.angular.z = angular_vel + noise_gen_[5](rng_);
-    //   twist_pub_.publish(twist_pub_msg);
-    // }
-
-    // publish odom tf
-    geometry_msgs::TransformStamped odom_tf;
-    odom_tf.header = odom_msg_.header;
-    odom_tf.child_frame_id = odom_msg_.child_frame_id;
-    odom_tf.transform.translation.x = odom_msg_.pose.pose.position.x;
-    odom_tf.transform.translation.y = odom_msg_.pose.pose.position.y;
-    odom_tf.transform.translation.z = 0;
-    odom_tf.transform.rotation = odom_msg_.pose.pose.orientation;
-    tf_broadcaster.sendTransform(odom_tf);
   }
-
 }
 
 void PosePub::BeforePhysicsStep(const Timekeeper& timekeeper) {
   b2Body* b2body = body_->physics_body_;
-
   b2Vec2 position = b2body->GetPosition();
   float angle = b2body->GetAngle();
-
-  // we apply the twist velocities, this must be done every physics step to make
-  // sure Box2D solver applies the correct velocity through out. The velocity
-  // given in the twist message should be in the local frame
-  // b2Vec2 linear_vel_local(twist_msg_.linear.x, 0);
-  // b2Vec2 linear_vel = b2body->GetWorldVector(linear_vel_local);
-  // float angular_vel = twist_msg_.angular.z;  // angular is independent of frames
-
-  // we want the velocity vector in the world frame at the center of mass
-
-  // V_cm = V_o + W x r_cm/o
-  // velocity at center of mass equals to the velocity at the body origin plus,
-  // angular velocity cross product the displacement from the body origin to the
-  // center of mass
-
-  // r is the vector from body origin to the CM in world frame
-  // b2Vec2 r = b2body->GetWorldCenter() - position;
-  // b2Vec2 linear_vel_cm = linear_vel + angular_vel * b2Vec2(-r.y, r.x);
-
-  // b2body->SetLinearVelocity(linear_vel_cm);
-  // b2body->SetAngularVelocity(angular_vel);
 }
 }
 

@@ -11,9 +11,11 @@
 #include <flatland_server/timekeeper.h>
 #include <flatland_server/types.h>
 #include <pedsim_msgs/AgentStates.h>
+#include <pedsim_msgs/AgentState.h>
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <arena_plugins/triangle_profile.h>
+#include<cmath> 
 
 
 #ifndef FLATLAND_PLUGINS_PEDSIM_MOVEMENT_H
@@ -50,6 +52,14 @@ class PedsimMovement : public ModelPlugin {
    */
   void BeforePhysicsStep(const Timekeeper &timekeeper) override;
 
+     /**
+   * @name          AfterPhysicsStep
+   * @brief         override the AfterPhysicsStep method
+   * @param[in]     config The plugin YAML node
+   */
+
+  void AfterPhysicsStep(const Timekeeper& timekeeper) override;
+
 
 
   private: 
@@ -68,7 +78,9 @@ class PedsimMovement : public ModelPlugin {
     ModelBody * left_leg_body_test_;        ///< Pointer to left_leg-body
     ModelBody * right_leg_body_test_;       ///< Pointer to right_leg-body
 
+    pedsim_msgs::AgentState person;
     ros::Subscriber pedsim_agents_sub_;     ///< Subscriber to pedsim agents state
+    ros::Publisher agent_state_pub_;          ///< Publisher for agent state of  every pedsim agent
 
     tf::TransformListener listener_;        ///< Transform Listner
 

@@ -41,6 +41,8 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
 
     //Subscribing to pedsim topic to apply same movement
     std::string pedsim_agents_topic = ros::this_node::getNamespace() + reader.Get<std::string>("agent_topic");
+
+    std::string agent_state_topic = reader.Get<std::string>("agent_state_pub", "agent_state");
     
     double update_rate = reader.Get<double>("update_rate");
     // update_timer_.SetRate(update_rate);  // timer to update global movement of agent
@@ -54,6 +56,8 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
 
     // Subscribe to ped_sims agent topic to retrieve the agents position
     pedsim_agents_sub_ = nh_.subscribe(pedsim_agents_topic, 1, &PedsimMovement::agentCallback, this);
+    // publish the social state of every pedestrain
+    agent_state_pub_ = nh_.advertise<pedsim_msgs::AgentState>(agent_state_topic, 1);
 
     //Get bodies of pedestrian
     body_ = GetModel()->GetBody(reader.Get<std::string>("base_body"))->GetPhysicsBody();
@@ -79,30 +83,25 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if (agents_ == NULL) { //!update_timer_.CheckUpdate(timekeeper) || 
         return;
     }
-
-    
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
     // ROS_WARN("name space: %s",ns_str.c_str());
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
 
-    //Find appropriate agent in list
-    pedsim_msgs::AgentState person;
+    //Find appropriate agent in list    
     for (int i=0; i < agents_->agent_states.size(); i++){
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
-            // ROS_WARN("find agent: %d",id_);
+            // ROS_INFO("find agent: %d of state: %s",id_,person.social_state.c_str());
             break;
         }
     };
-
     //Check if person was found
     if (std::isnan(person.twist.linear.x)){
-        ROS_WARN("Couldn't find agent: %d", id_);
+        ROS_WARN("Couldn't find agent: %d", int(person.id));
         return;
     }
-
     //Initialize agent
     if(init_== true){
         // Set initial leg position
@@ -110,11 +109,8 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         init_ = false;
     }
 
-
     float vel_x =person.twist.linear.x;; //
-    // ROS_WARN("vel_x%f",vel_x);
     float vel_y =person.twist.linear.y;; // 
-    // ROS_WARN("vel_y%f",vel_y);
     float angle_soll = atan2(vel_y, vel_x);
     float angle_ist = body_->GetAngle();
 
@@ -124,9 +120,11 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     //Set pedsim_agent velocity in flatland simulator to approach next position
     body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
 
+    float vel=sqrt(vel_x*vel_x+vel_y*vel_y);
+    
     //set each leg to the appropriate position.
-    if (toggle_leg_movement_){      
-        double vel_mult = wp_->get_speed_multiplier(vel_x);
+    if (toggle_leg_movement_){
+        double vel_mult = wp_->get_speed_multiplier(vel);
         // ROS_WARN("vel_mult %lf",vel_mult);
         switch (state_){
             //Right leg is moving
@@ -134,7 +132,6 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
                 moveRightLeg(vel_x * vel_mult, vel_y * vel_mult, (angle_soll - angle_ist));
                 if (vel_mult ==0.0){
                     state_ = LEFT;
-                    // ROS_WARN("turn to left");
                 }
                 break;
             //Left leg is moving
@@ -142,7 +139,6 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
                 moveLeftLeg(vel_x * vel_mult, vel_y * vel_mult, (angle_soll - angle_ist));
                 if (vel_mult ==0.0){
                     state_ = RIGHT;
-                    // ROS_WARN("turn to right");
                 }
                 break;
         }
@@ -207,9 +203,9 @@ void PedsimMovement::set_circular_footprint(b2Body * physics_body, double radius
 // other option: modify flatland package, but third-party
 void PedsimMovement::ConfigFootprintDef(b2FixtureDef &fixture_def) {
     // configure physics properties
-    fixture_def.density = 0.0;
-    fixture_def.friction = 0.0;
-    fixture_def.restitution = 0.0;
+    fixture_def.density = 5.0;
+    fixture_def.friction = 1.0;
+    fixture_def.restitution = 2.0;
 
     // config collision properties
     fixture_def.isSensor = false;
@@ -226,6 +222,15 @@ void PedsimMovement::ConfigFootprintDef(b2FixtureDef &fixture_def) {
         // "I will collide with nothing"
         fixture_def.filter.maskBits = 0;
     }
+}
+void PedsimMovement::AfterPhysicsStep(const Timekeeper& timekeeper) {
+  bool publish = update_timer_.CheckUpdate(timekeeper);
+  if (publish) {
+    // get the state of the body and publish the data
+    // publish agent state for every human
+    //publish the agent state 
+    agent_state_pub_.publish(person);
+  }
 }
 };
 

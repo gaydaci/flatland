@@ -66,12 +66,12 @@ void DiffDrive::OnInitialize(const YAML::Node& config) {
   std::string body_name = reader.Get<std::string>("body");
   std::string odom_frame_id = reader.Get<std::string>("odom_frame_id", "odom");
 
-  std::string twist_topic = reader.Get<std::string>("twist_sub", "cmd_vel");
+  std::string twist_topic = reader.Get<std::string>("twist_sub", ros::this_node::getNamespace()+"/cmd_vel");
   std::string odom_topic =
-      reader.Get<std::string>("odom_pub", "odometry/filtered");
+      reader.Get<std::string>("odom_pub", "/odometry/filtered");
   std::string ground_truth_topic =
-      reader.Get<std::string>("ground_truth_pub", "odometry/ground_truth");
-  std::string twist_pub_topic = reader.Get<std::string>("twist_pub", "twist");
+      reader.Get<std::string>("ground_truth_pub", ros::this_node::getNamespace()+"/odometry/ground_truth");
+  std::string twist_pub_topic = reader.Get<std::string>("twist_pub", ros::this_node::getNamespace()+"/twist");
 
   // noise are in the form of linear x, linear y, angular variances
   std::vector<double> odom_twist_noise =
@@ -122,9 +122,9 @@ void DiffDrive::OnInitialize(const YAML::Node& config) {
 
   // init the values for the messages
   // fix ns issue by lei
-  ground_truth_msg_.header.frame_id = odom_frame_id;
-  // ground_truth_msg_.header.frame_id = 
-  //     tf::resolve("", GetModel()->NameSpaceTF(odom_frame_id));
+  // ground_truth_msg_.header.frame_id = odom_frame_id;
+  ground_truth_msg_.header.frame_id = 
+      tf::resolve("", GetModel()->NameSpaceTF(odom_frame_id));
   ground_truth_msg_.child_frame_id =
       tf::resolve("", GetModel()->NameSpaceTF(body_->name_));
   ground_truth_msg_.twist.covariance.fill(0);

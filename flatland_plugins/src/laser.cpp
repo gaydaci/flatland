@@ -63,7 +63,7 @@ void Laser::OnInitialize(const YAML::Node &config) {
   ParseParameters(config);
 
   update_timer_.SetRate(update_rate_);
-  scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(topic_, 1);
+  scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(ros::this_node::getNamespace()+topic_, 1);
 
   // construct the body to laser transformation matrix once since it never
   // changes

@@ -292,7 +292,7 @@ bool ServiceManager::MoveModel(flatland_msgs::MoveModel::Request &request,
     response.success = false;
     response.message = std::string(e.what());
   }
-  ROS_WARN("Move model in flatland: %f", (ros::WallTime::now() - start).toSec());
+  ROS_INFO("Move model in flatland: %f", (ros::WallTime::now() - start).toSec());
 
   return true;
 }

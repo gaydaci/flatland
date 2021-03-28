@@ -10,6 +10,7 @@ namespace flatland_plugins {
 
     TriangleProfile::TriangleProfile(double step_time) : step_time_{step_time}{
         state_ = INIT;
+        // step_time_=step_time_/7*5;
     }
 
     
