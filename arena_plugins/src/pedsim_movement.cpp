@@ -39,6 +39,9 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     std::normal_distribution<double> d_leg_radius{reader.Get<double>("leg_radius") , reader.Get<double>("var_leg_radius")};
     leg_radius_ = d_leg_radius(generator);
 
+    safety_dist_ = reader.Get<double>("safety_dist");
+    safety_dist_original_=safety_dist_;
+
     //Subscribing to pedsim topic to apply same movement
     std::string pedsim_agents_topic = ros::this_node::getNamespace() + reader.Get<std::string>("agent_topic");
 
@@ -63,12 +66,16 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     body_ = GetModel()->GetBody(reader.Get<std::string>("base_body"))->GetPhysicsBody();
     left_leg_body_ = GetModel()->GetBody(reader.Get<std::string>("left_leg_body"))->GetPhysicsBody();
     right_leg_body_ = GetModel()->GetBody(reader.Get<std::string>("right_leg_body"))->GetPhysicsBody();
+    safety_dist_b2body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"))->GetPhysicsBody();
+    safety_dist_body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"));
     
     // Set leg radius
     set_circular_footprint(left_leg_body_, leg_radius_);
     set_circular_footprint(right_leg_body_, leg_radius_);
+    updateSafetyDistance();
+
     // check if valid bodies are given
-    if (body_ == nullptr || left_leg_body_ == nullptr || right_leg_body_ == nullptr) {
+    if (body_ == nullptr || left_leg_body_ == nullptr || right_leg_body_ == nullptr || safety_dist_b2body_==nullptr) {
         throw flatland_server::YAMLException("Body with with the given name does not exist");
     }
 }
@@ -78,22 +85,49 @@ void PedsimMovement::reconfigure(){
     set_circular_footprint(right_leg_body_, leg_radius_);
 }
 
+void PedsimMovement::updateSafetyDistance(){
+    set_safety_dist_footprint(safety_dist_b2body_, safety_dist_);
+}
+
 void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     // check if an update is REQUIRED
     if (agents_ == NULL) { //!update_timer_.CheckUpdate(timekeeper) || 
         return;
     }
+
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
     // ROS_WARN("name space: %s",ns_str.c_str());
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
 
-    //Find appropriate agent in list    
-    for (int i=0; i < agents_->agent_states.size(); i++){
+    //Find appropriate agent in list
+    for (int i=0; i < (int)agents_->agent_states.size(); i++){
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
-            // ROS_INFO("find agent: %d of state: %s",id_,person.social_state.c_str());
+            //change visualization of the human if they are talking 
+            if (person.social_state=="\"talking\""){
+                // ROS_INFO("change color because talking");
+                //r g b a
+                Color c=Color(0.93, 0.16, 0.16, 0.3);
+                safety_dist_body_->SetColor(c);
+                safety_dist_=0.5;
+                updateSafetyDistance();
+            }else if(person.social_state=="\"running\""){
+                ROS_INFO("change color because running");
+                //r g b a
+                Color c=Color(0.56, 0.7, 0, 0.3);
+                safety_dist_body_->SetColor(c);
+                safety_dist_=1.5;
+                updateSafetyDistance();
+            }else if(person.social_state=="\"individual_moving\""){
+                // ROS_INFO("change color because walking");
+                //r g b a
+                Color c=Color(0.26, 0.3, 0, 0.3);//[0.26, 0.3, 0, 0.3]
+                safety_dist_body_->SetColor(c);
+                safety_dist_ = safety_dist_original_;
+                updateSafetyDistance();
+            }
             break;
         }
     };
@@ -116,16 +150,18 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
 
     //Set pedsim_agent position in flatland simulator
     body_->SetTransform(b2Vec2(person.pose.position.x, person.pose.position.y), angle_soll);
+    safety_dist_b2body_->SetTransform(b2Vec2(person.pose.position.x, person.pose.position.y), angle_soll);
     
     //Set pedsim_agent velocity in flatland simulator to approach next position
     body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
+    safety_dist_b2body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
+    
 
     float vel=sqrt(vel_x*vel_x+vel_y*vel_y);
     
     //set each leg to the appropriate position.
     if (toggle_leg_movement_){
         double vel_mult = wp_->get_speed_multiplier(vel);
-        // ROS_WARN("vel_mult %lf",vel_mult);
         switch (state_){
             //Right leg is moving
             case RIGHT:
@@ -199,6 +235,26 @@ void PedsimMovement::set_circular_footprint(b2Body * physics_body, double radius
 // ToDo: Implelent that more elegant
 // Copied this function from model_body.cpp in flatland folder
 // This is necessary to be able to set the leg radius auto-generated with variance
+// original function just applies the defined radius in yaml-file.
+// other option: modify flatland package, but third-party
+void PedsimMovement::set_safety_dist_footprint(b2Body * physics_body, double radius){
+    Vec2 center = Vec2(0, 0);
+    b2FixtureDef fixture_def;
+    ConfigFootprintDefSafetyDist(fixture_def);
+
+    b2CircleShape shape;
+    shape.m_p.Set(center.x, center.y);
+    shape.m_radius = radius;
+
+    fixture_def.shape = &shape;
+    b2Fixture* old_fix = physics_body->GetFixtureList();
+    physics_body->DestroyFixture(old_fix);
+    physics_body->CreateFixture(&fixture_def);
+}
+
+// ToDo: Implelent that more elegant
+// Copied this function from model_body.cpp in flatland folder
+// This is necessary to be able to set the leg radius auto-generated with variance
 // original function just applies the defined properties from yaml-file.
 // other option: modify flatland package, but third-party
 void PedsimMovement::ConfigFootprintDef(b2FixtureDef &fixture_def) {
@@ -223,6 +279,35 @@ void PedsimMovement::ConfigFootprintDef(b2FixtureDef &fixture_def) {
         fixture_def.filter.maskBits = 0;
     }
 }
+
+// ToDo: Implelent that more elegant
+// Copied this function from model_body.cpp in flatland folder
+// This is necessary to be able to set the leg radius auto-generated with variance
+// original function just applies the defined properties from yaml-file.
+// other option: modify flatland package, but third-party
+void PedsimMovement::ConfigFootprintDefSafetyDist(b2FixtureDef &fixture_def) {
+    // configure physics properties
+    fixture_def.density = 0.0;
+    fixture_def.friction = 0.0;
+    fixture_def.restitution = 0.0;
+
+    // config collision properties
+    fixture_def.isSensor = true;
+    fixture_def.filter.groupIndex = 0;
+
+    // Defines that body is just seen in layer "2D" and "ped"
+    fixture_def.filter.categoryBits = 0x000a;
+
+    bool collision = false;
+    if (collision) {
+        // b2d docs: maskBits are "I collide with" bitmask
+        fixture_def.filter.maskBits = fixture_def.filter.categoryBits;
+    } else {
+        // "I will collide with nothing"
+        fixture_def.filter.maskBits = 0;
+    }
+}
+
 void PedsimMovement::AfterPhysicsStep(const Timekeeper& timekeeper) {
   bool publish = update_timer_.CheckUpdate(timekeeper);
   if (publish) {
