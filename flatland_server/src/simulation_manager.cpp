@@ -171,21 +171,20 @@ void SimulationManager::Shutdown() {
 bool SimulationManager::callback_StepWorld(flatland_msgs::StepWorld::Request &request,flatland_msgs::StepWorld::Response &response){
   
   try {
-    // ros::WallRate rate_set(update_rate_);
-    // double required_duration=request.step_time.data;
-    // int num_of_steps;
-    // num_of_steps=(int)(required_duration/step_size_);
-    // for(int i=0;i<num_of_steps;i++){
-    //   world_->Update(timekeeper);  // Step physics by ros cycle time
-    //   ros::spinOnce();
-    //   rate_set.sleep();
-    // }
-    world_->Update(timekeeper);  // Step physics by ros cycle time
-    last_update_time_=ros::WallTime::now().toSec();
+    ros::WallRate rate_set(update_rate_);
+    int required_steps;
+    float t = request.required_time;
+    required_steps=(int)(t/step_size_);
+    for(int i=0;i<required_steps;i++){
+      world_->Update(timekeeper);  // Step physics by ros cycle time
+      ros::spinOnce();
+      rate_set.sleep();
+    }
+
+    last_update_time_=ros::Time::now().toSec();
     response.success = true;
     std::string current_time = std::to_string(timekeeper.GetSimTime().toSec());
     response.message = "current sim time(s):  "+current_time;
-    //ros::Time current_time=timekeeper.GetSimTime();
     
   } catch (const std::exception &e) {
     response.success = false;
@@ -196,6 +195,20 @@ bool SimulationManager::callback_StepWorld(flatland_msgs::StepWorld::Request &re
   return true;
 
 }
+};  
 
-
-};  // namespace flatland_server
+// namespace flatland_server
+    // int required_steps;
+    // float t = request.required_time;
+    // if(request == flatland_msgs::StepWorldRequest{})
+    // {
+    //   required_steps = 1;
+    // }else
+    // {
+    // required_steps = ceil(t/step_size_);
+    // };
+    // for (int i = 0; i < required_steps; i++)
+    // {
+    //   world_->Update(timekeeper);  // Step physics by ros cycle time
+    // };
+    // world_->Update(timekeeper);  // Step physics by ros cycle time
