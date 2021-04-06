@@ -8,6 +8,7 @@
 
 #include <flatland_plugins/update_timer.h>
 #include <flatland_server/model_plugin.h>
+#include <flatland_server/body.h>
 #include <flatland_server/timekeeper.h>
 #include <flatland_server/types.h>
 #include <pedsim_msgs/AgentStates.h>
@@ -74,6 +75,8 @@ class PedsimMovement : public ModelPlugin {
     b2Body * body_;                         ///< Pointer to base-body
     b2Body * left_leg_body_;                ///< Pointer to left_leg-body
     b2Body * right_leg_body_;               ///< Pointer to right_leg-body
+    b2Body * safety_dist_b2body_;               ///< Pointer to safety distance circle
+    Body * safety_dist_body_;               ///< Pointer to safety distance circle
 
     ModelBody * left_leg_body_test_;        ///< Pointer to left_leg-body
     ModelBody * right_leg_body_test_;       ///< Pointer to right_leg-body
@@ -93,6 +96,8 @@ class PedsimMovement : public ModelPlugin {
     int state_;                              ///< state of leg movement
     bool init_;
     double leg_radius_;
+    double safety_dist_;
+    double safety_dist_original_;
     std::string body_frame_;                  ///< frame name of base-body
 
     flatland_plugins::TriangleProfile* wp_;
@@ -123,11 +128,29 @@ class PedsimMovement : public ModelPlugin {
      * ToDo: Find more elegeant solution!
      */
     void set_circular_footprint(b2Body * physics_body_, double radius);
+
+    /**
+     * @brief Method is copy of model_body.cpp to be able to change radius programatically
+     * ToDo: Find more elegeant solution!
+     */
+    void set_safety_dist_footprint(b2Body * physics_body_, double radius);
+
     /**
      * @brief Method is copy of model_body.cpp to be able to change radius programatically
      * ToDo: Find more elegeant solution!
      */
     void ConfigFootprintDef(b2FixtureDef &fixture_def);
+
+    /**
+     * @brief To be able to change radius programatically
+     */
+    void ConfigFootprintDefSafetyDist(b2FixtureDef &fixture_def); 
+
+  /**
+   * @brief update safety distance circle, when the agent is chatting.
+   * Body Footprint of safety dist circle will be set.
+   */
+    void updateSafetyDistance();
 
 };
 };
