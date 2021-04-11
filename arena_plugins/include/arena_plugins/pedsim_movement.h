@@ -43,6 +43,7 @@ class PedsimMovement : public ModelPlugin {
    */
   void BeforePhysicsStep(const Timekeeper &timekeeper) override;
 
+  int GetAgent(int agentId, pedsim_msgs::AgentState &agent);
 
 
   private: 

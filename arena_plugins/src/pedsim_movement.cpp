@@ -69,6 +69,21 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     }
 }
 
+int PedsimMovement::GetAgent(int agentId, pedsim_msgs::AgentState &agent) {
+    for (int i = 0; i < agents_->agent_states.size(); i++){
+        pedsim_msgs::AgentState p = agents_->agent_states[i];
+        if (p.id == agentId){
+            agent = p;
+            return 0;
+        }
+
+        if (i == agents_->agent_states.size() - 1)
+        {
+            ROS_WARN("Couldn't find agent: %d", agentId);
+        }
+    }
+    return -1;
+}
 
 void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if (agents_ == NULL) {
@@ -104,7 +119,8 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
 
     float vel_x = person.twist.linear.x;
     float vel_y = person.twist.linear.y;
-    float angle_soll = atan2(vel_y, vel_x);
+
+    float angle_soll = atan2(person.direction.y, person.direction.x);
     float angle_ist = body_->GetAngle();
 
     //Set pedsim_agent position in flatland simulator
