@@ -1,0 +1,6 @@
+# Added by Ronja Gueldenring
+# Triggers taking a step step_time sec in flatland
+std_msgs/Float64 step_time
+---
+bool success
+string message

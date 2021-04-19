@@ -1,0 +1,5 @@
+# Added by Xinlin Zhao
+# Triggers taking a step step_time sec in flatland
+---
+bool success
+string message

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(flatland_plugins)
+project(arena_plugins)
 
 # Ensure we're using c++11
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -12,11 +12,15 @@ find_package(catkin REQUIRED COMPONENTS
   pluginlib
   roscpp
   flatland_server
+  flatland_plugins
   cmake_modules
   tf
   flatland_msgs
   std_msgs
+  nav_msgs
+  pedsim_msgs
 )
+
 
 find_package(Eigen3 REQUIRED)
 
@@ -51,7 +55,7 @@ endif()
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES flatland_plugins_lib
+  LIBRARIES arena_plugins_lib
   CATKIN_DEPENDS pluginlib roscpp flatland_server std_msgs
 )
 
@@ -61,29 +65,31 @@ catkin_package(
 
 include_directories(
   include
-  include/thirdparty/tweeny
+  ${PROJECT_SOURCE_DIR}/../flatland_plugins/include/thirdparty/tweeny
+  ${PROJECT_SOURCE_DIR}/../flatland_plugins/include/thirdparty 
   ${catkin_INCLUDE_DIRS}
   ${YAML_CPP_INCLUDE_DIRS}
   ${Eigen3_INCLUDE_DIRS}
 )
 
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+foreach(dir ${dirs})
+  message(STATUS "dir='${dir}'")
+endforeach()
+
 # Declare a C++ library
-add_library(flatland_plugins_lib
-  src/laser.cpp
-  src/tricycle_drive.cpp
-  src/diff_drive.cpp
-  src/model_tf_publisher.cpp
-  src/update_timer.cpp
-  src/bumper.cpp
-  src/tween.cpp
-  src/bool_sensor.cpp
-  src/world_modifier.cpp
-  src/world_random_wall.cpp
-  src/gps.cpp
+add_library(arena_plugins_lib
+  src/random_move.cpp
+  src/random_wandering.cpp
+  src/tween2.cpp
+  src/pedsim_movement.cpp
+  src/vehicle_movement.cpp
+  src/triangle_profile.cpp
+  src/pose_pub.cpp
 )
 
-add_dependencies(flatland_plugins_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(flatland_plugins_lib
+add_dependencies(arena_plugins_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(arena_plugins_lib
   ${catkin_LIBRARIES}
   ${Eigen3_LIBRARIES}
   yaml-cpp
@@ -104,7 +110,7 @@ target_link_libraries(flatland_plugins_lib
 # )
 
 # Mark executables and/or libraries for installation
-install(TARGETS flatland_plugins_lib
+install(TARGETS arena_plugins_lib
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -116,15 +122,8 @@ install(DIRECTORY include/${PROJECT_NAME}/
   FILES_MATCHING PATTERN "*.h"
 )
 
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
-)
-
-
-
 # Install plugins file
-install(FILES flatland_plugins.xml
+install(FILES arena_plugins.xml
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
@@ -141,38 +140,4 @@ install(FILES flatland_plugins.xml
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
 
-if(CATKIN_ENABLE_TESTING)
 
-  add_rostest_gtest(laser_test test/laser_test.test
-                    test/laser_test.cpp)
-  target_link_libraries(laser_test flatland_plugins_lib)
-
-  add_rostest_gtest(tricycle_drive_test test/tricycle_drive_test.test
-                    test/tricycle_drive_test.cpp)
-  target_link_libraries(tricycle_drive_test flatland_plugins_lib)
-
-  add_rostest_gtest(diff_drive_test test/diff_drive_test.test
-                    test/diff_drive_test.cpp)
-  target_link_libraries(diff_drive_test flatland_plugins_lib)
-
-  add_rostest_gtest(bumper_test test/bumper_test.test
-                    test/bumper_test.cpp)
-  target_link_libraries(bumper_test flatland_plugins_lib)
-
-  add_rostest_gtest(model_tf_publisher_test test/model_tf_publisher_test.test
-                    test/model_tf_publisher_test.cpp)
-  target_link_libraries(model_tf_publisher_test flatland_plugins_lib)
-
-  add_rostest_gtest(update_timer_test test/update_timer_test.test
-                    test/update_timer_test.cpp)
-  target_link_libraries(update_timer_test flatland_plugins_lib)
-
-  add_rostest_gtest(tween_test test/tween_test.test
-                    test/tween_test.cpp)
-  target_link_libraries(tween_test flatland_plugins_lib ${catkin_LIBRARIES})
-
-  add_rostest_gtest(gps_test test/gps_test.test
-                    test/gps_test.cpp)
-  target_link_libraries(gps_test flatland_plugins_lib)
-
-endif()

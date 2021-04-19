@@ -7,9 +7,10 @@
  *    \ \_\ \_\ \___/  \ \_\ \___,_\ \_,__/\ \____/\ \__\/\____/
  *     \/_/\/_/\/__/    \/_/\/__,_ /\/___/  \/___/  \/__/\/___/
  * @copyright Copyright 2017 Avidbots Corp.
- * @name	diff_drive.h
- * @brief   Diff drive plugin
- * @author  Mike Brousseau
+ * @name	pose_pub.h
+ * @brief   pose publish plugin
+ * @author  Junhui Li
+ * @date 29.1.2021
  *
  * Software License Agreement (BSD License)
  *
@@ -53,14 +54,14 @@
 #include <tf/transform_broadcaster.h>
 #include <random>
 
-#ifndef FLATLAND_PLUGINS_DIFFDRIVE_H
-#define FLATLAND_PLUGINS_DIFFDRIVE_H
+#ifndef FLATLAND_PLUGINS_POSEPUB_H
+#define FLATLAND_PLUGINS_POSEPUB_H
 
 using namespace flatland_server;
 
 namespace flatland_plugins {
 
-class DiffDrive : public flatland_server::ModelPlugin {
+class PosePub : public flatland_server::ModelPlugin {
  public:
   ros::Subscriber twist_sub_;
   ros::Publisher odom_pub_;
@@ -95,7 +96,7 @@ class DiffDrive : public flatland_server::ModelPlugin {
    * @brief       callback to apply twist (velocity and omega)
    * @param[in]   timestep how much the physics time will increment
    */
-  void TwistCallback(const geometry_msgs::Twist& msg);
+  // void TwistCallback(const geometry_msgs::Twist& msg);
 
    /**
    * @name          AfterPhysicsStep
