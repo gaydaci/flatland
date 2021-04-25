@@ -120,7 +120,8 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     float vel_x = person.twist.linear.x;
     float vel_y = person.twist.linear.y;
 
-    float angle_soll = atan2(person.direction.y, person.direction.x);
+    // float angle_soll = atan2(person.direction.y, person.direction.x);
+    float angle_soll = person.direction;
     float angle_ist = body_->GetAngle();
 
     //Set pedsim_agent position in flatland simulator
