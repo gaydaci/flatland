@@ -46,7 +46,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     std::string pedsim_agents_topic = ros::this_node::getNamespace() + reader.Get<std::string>("agent_topic");
 
     std::string agent_state_topic = reader.Get<std::string>("agent_state_pub", "agent_state");
-    
+    ROS_WARN("Human pedsim_agents_topic is : %s     agent_state_topic is : %s",pedsim_agents_topic.c_str(),agent_state_topic.c_str());   
     double update_rate = reader.Get<double>("update_rate");
     // update_timer_.SetRate(update_rate);  // timer to update global movement of agent
     
@@ -59,7 +59,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
 
     // Subscribe to ped_sims agent topic to retrieve the agents position
     pedsim_agents_sub_ = nh_.subscribe(pedsim_agents_topic, 1, &PedsimMovement::agentCallback, this);
-    // publish the social state of every pedestrain
+    // publish the socialPedsimMovement.Aft state of every pedestrain
     agent_state_pub_ = nh_.advertise<pedsim_msgs::AgentState>(agent_state_topic, 1);
 
     //Get bodies of pedestrian
@@ -87,6 +87,22 @@ void PedsimMovement::reconfigure(){
 
 void PedsimMovement::updateSafetyDistance(){
     set_safety_dist_footprint(safety_dist_b2body_, safety_dist_);
+}
+
+int PedsimMovement::GetAgent(int agentId, pedsim_msgs::AgentState &agent) {
+    for (int i = 0; i < agents_->agent_states.size(); i++){
+        pedsim_msgs::AgentState p = agents_->agent_states[i];
+        if (p.id == agentId){
+            agent = p;
+            return 0;
+        }
+
+        if (i == agents_->agent_states.size() - 1)
+        {
+            ROS_WARN("Couldn't find Human agent: %d", agentId);
+        }
+    }
+    return -1;
 }
 
 void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
@@ -314,6 +330,7 @@ void PedsimMovement::AfterPhysicsStep(const Timekeeper& timekeeper) {
     // get the state of the body and publish the data
     // publish agent state for every human
     //publish the agent state 
+    // ROS_WARN("puplishing humnan agent state with %d", int(person.id));
     agent_state_pub_.publish(person);
   }
 }

@@ -52,7 +52,7 @@ class PedsimMovement : public ModelPlugin {
    * @param[in] timekeeper Object managing the simulation time
    */
   void BeforePhysicsStep(const Timekeeper &timekeeper) override;
-
+  int GetAgent(int agentId, pedsim_msgs::AgentState &agent);
      /**
    * @name          AfterPhysicsStep
    * @brief         override the AfterPhysicsStep method
