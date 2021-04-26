@@ -32,7 +32,6 @@ void VehicleMovement::OnInitialize(const YAML::Node &config){
     std::string pedsim_agents_topic = ros::this_node::getNamespace() + reader.Get<std::string>("agent_topic");
     
     std::string agent_state_topic = reader.Get<std::string>("agent_state_pub", "agent_state");
-    ROS_WARN("Vehiacle pedsim_agents_topic is : %s     agent_state_topic is : %s ",pedsim_agents_topic.c_str(),agent_state_topic.c_str());    
     double update_rate = reader.Get<double>("update_rate");
 
 
