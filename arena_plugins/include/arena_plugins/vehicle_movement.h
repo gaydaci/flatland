@@ -16,7 +16,7 @@
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <arena_plugins/triangle_profile.h>
-#include<cmath> 
+#include <cmath> 
 
 
 #ifndef FLATLAND_PLUGINS_VEHICLE_MOVEMENT_H
@@ -43,19 +43,16 @@ class VehicleMovement : public ModelPlugin {
    * @param[in] timekeeper Object managing the simulation time
    */
   void BeforePhysicsStep(const Timekeeper &timekeeper) override;
-       /**
-  //  * @name          AfterPhysicsStep
-  //  * @brief         override the AfterPhysicsStep method
-  //  * @param[in]     config The plugin YAML node
-  //  */
 
+   /**
+    * @name          AfterPhysicsStep
+    * @brief         override the AfterPhysicsStep method
+    * @param[in] timekeeper Object managing the simulation time
+    */
   void AfterPhysicsStep(const Timekeeper& timekeeper) override;
 
 
-
-
   private: 
-
     b2Body * body_;                            ///< Pointer to base-body
     UpdateTimer update_timer_;              ///< for controlling update rate
 
@@ -77,10 +74,7 @@ class VehicleMovement : public ModelPlugin {
      * @param[in] agents array of all agents
      */
     void agentCallback(const pedsim_msgs::AgentStatesConstPtr& agents);
-    /**
-    * @brief update safety distance circle, when the agent is chatting.
-    * Body Footprint of safety dist circle will be set.
-    */
+
     /**
      * @brief Method is copy of model_body.cpp to be able to change radius programatically
      * ToDo: Find more elegeant solution!
@@ -89,14 +83,14 @@ class VehicleMovement : public ModelPlugin {
 
     /**
      * @brief To be able to change radius programatically
-    */
+     */
     void ConfigFootprintDefSafetyDist(b2FixtureDef &fixture_def); 
-    /**
-   * @brief update safety distance circle, when the agent is chatting.
-   * Body Footprint of safety dist circle will be set.
-   */
-    void updateSafetyDistance();
 
+    /**
+     * @brief update safety distance circle, when the agent is chatting.
+     * Body Footprint of safety dist circle will be set.
+     */
+    void updateSafetyDistance();
     
 };
 };

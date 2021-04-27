@@ -106,7 +106,7 @@ int PedsimMovement::GetAgent(int agentId, pedsim_msgs::AgentState &agent) {
 
 void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     // check if an update is REQUIRED
-    if (agents_ == NULL) { //!update_timer_.CheckUpdate(timekeeper) || 
+    if (agents_ == NULL) {
         return;
     }
 
@@ -116,7 +116,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
 
     //Find appropriate agent in list
-    for (int i=0; i < (int)agents_->agent_states.size(); i++){
+    for (int i = 0; i < (int) agents_->agent_states.size(); i++){
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
@@ -145,12 +145,13 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
             }
             break;
         }
+
+        if (i == agents_->agent_states.size() - 1) {
+            ROS_WARN("Couldn't find agent: %d", id_);
+            return;
+        }
     };
-    //Check if person was found
-    if (std::isnan(person.twist.linear.x)){
-        ROS_WARN("Couldn't find agent: %d", int(person.id));
-        return;
-    }
+
     //Initialize agent
     if(init_== true){
         // Set initial leg position
@@ -158,9 +159,9 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         init_ = false;
     }
 
-    float vel_x =person.twist.linear.x;; //
-    float vel_y =person.twist.linear.y;; // 
-    float angle_soll = atan2(person.direction.y, person.direction.x);
+    float vel_x = person.twist.linear.x;
+    float vel_y = person.twist.linear.y;
+    float angle_soll = person.direction;
     float angle_ist = body_->GetAngle();
 
     //Set pedsim_agent position in flatland simulator

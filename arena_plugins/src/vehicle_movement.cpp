@@ -16,28 +16,20 @@ namespace flatland_plugins {
 void VehicleMovement::OnInitialize(const YAML::Node &config){
     agents_ = NULL;
 
-
-    // random generator to generate leg_offset, step_length with variance.
-    std::random_device r;
-    std::default_random_engine generator(r());
-
     //get parameters
     flatland_server::YamlReader reader(config);
-    std::normal_distribution<double> d_step_time{reader.Get<double>("step_time") , reader.Get<double>("var_step_time")};
-    double step_time = d_step_time(generator);
 
     safety_dist_ = reader.Get<double>("safety_dist");
-    safety_dist_original_=safety_dist_;
+    safety_dist_original_ = safety_dist_;
     //Subscribing to pedsim topic to apply same movement
     std::string pedsim_agents_topic = ros::this_node::getNamespace() + reader.Get<std::string>("agent_topic");
     
     std::string agent_state_topic = reader.Get<std::string>("agent_state_pub", "agent_state");
     double update_rate = reader.Get<double>("update_rate");
 
-
     // Subscribe to ped_sims agent topic to retrieve the agents position
     pedsim_agents_sub_ = nh_.subscribe(pedsim_agents_topic, 1, &VehicleMovement::agentCallback, this);
-    // publish the socialPedsimMovement.Aft state of every pedestrain
+    // publish pedsim agent AgentState
     agent_state_pub_ = nh_.advertise<pedsim_msgs::AgentState>(agent_state_topic, 1);
 
     //Get bodies of pedestrian
@@ -45,8 +37,6 @@ void VehicleMovement::OnInitialize(const YAML::Node &config){
     safety_dist_b2body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"))->GetPhysicsBody();
     safety_dist_body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"));
     updateSafetyDistance();
-
-
 
     // check if valid bodies are given
     if (body_ == nullptr) {
@@ -65,30 +55,29 @@ void VehicleMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
+    // ROS_WARN("name space: %s",ns_str.c_str());
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
 
     //Find appropriate agent in list
-    
-    for (int i = 0; i < (int)agents_->agent_states.size(); i++){
+    for (int i = 0; i < (int) agents_->agent_states.size(); i++){
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
-            Color c=Color(0.93, 0.16, 0.16, 0.3);
-            safety_dist_body_->SetColor(c);
             updateSafetyDistance();
             break;
         }
 
         if (i == agents_->agent_states.size() - 1)
         {
-            ROS_WARN("Couldn't find agent: %d", id_);
+            ROS_WARN("Couldn't find vehicle agent: %d", id_);
+            return;
         }
     };
 
 
     float vel_x = person.twist.linear.x;
     float vel_y = person.twist.linear.y;
-    float angle_soll = atan2(vel_y, vel_x);
+    float angle_soll = person.direction;
     float angle_ist = body_->GetAngle();
 
     //Set pedsim_agent position in flatland simulator
@@ -98,8 +87,8 @@ void VehicleMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     //Set pedsim_agent velocity in flatland simulator to approach next position
     body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
     safety_dist_b2body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
-    
 }
+
 // ToDo: Implelent that more elegant
 // Copied this function from model_body.cpp in flatland folder
 // This is necessary to be able to set the leg radius auto-generated with variance
@@ -147,6 +136,7 @@ void VehicleMovement::ConfigFootprintDefSafetyDist(b2FixtureDef &fixture_def) {
         fixture_def.filter.maskBits = 0;
     }
 }
+
 void VehicleMovement::agentCallback(const pedsim_msgs::AgentStatesConstPtr& agents){
     agents_ = agents;
 }
