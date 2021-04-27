@@ -32,7 +32,14 @@ class RandomWandering : public ModelPlugin {
   ros::Subscriber laserSub;
   sensor_msgs::LaserScanConstPtr laserScan;
   bool obstacleNear;
+  b2Body * body_;                            ///< Pointer to base-body
+  UpdateTimer update_timer_;              ///< for controlling update rate
 
+  b2Body * safety_dist_b2body_;               ///< Pointer to safety distance circle
+  Body * safety_dist_body_;     
+
+  double safety_dist_;
+  double safety_dist_original_;
   void OnInitialize(const YAML::Node& config) override;
   void BeforePhysicsStep(const Timekeeper& Timekeeper) override;
   void LaserCallback(const sensor_msgs::LaserScanConstPtr& laser_scan);
@@ -42,6 +49,20 @@ class RandomWandering : public ModelPlugin {
   void DeactivateState(WandererState state_in);
   int GetTurnDirection(float angle, float angle_goal);
   float RandomRange(const float range_lo, const float range_hi);
+  
+
+  void set_safety_dist_footprint(b2Body * physics_body_, double radius);
+
+  /**
+    * @brief To be able to change radius programatically
+  */
+  void ConfigFootprintDefSafetyDist(b2FixtureDef &fixture_def); 
+  /**
+  * @brief update safety distance circle, when the agent is chatting.
+  * Body Footprint of safety dist circle will be set.
+  */
+  void updateSafetyDistance();
+
 
 };
 

@@ -12,11 +12,18 @@ using namespace std;
 void RandomWandering::OnInitialize(const YAML::Node& config) {
   // read yaml file
   YamlReader reader(config);
+  safety_dist_ = reader.Get<double>("safety_dist");
+  safety_dist_original_=safety_dist_;
   string body_name = reader.Get<string>("body");
   configuredLinearVelocity = reader.Get<float>("linear_velocity");
   configuredAngularVelocity = reader.Get<float>("angular_velocity");
   body = GetModel()->GetBody(body_name);
-  if (body == nullptr) {
+  body_ =  body->physics_body_ ;
+  safety_dist_b2body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"))->GetPhysicsBody();
+  safety_dist_body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"));
+  updateSafetyDistance();
+
+  if (body_ == nullptr) {
     throw YAMLException("Body with the name" + Q(body_name) + "does not exits");
   }
 
@@ -25,15 +32,79 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
   obstacleNear = false;
   laserScan = nullptr;
   targetAngularVelocity = 0.0;
+  std::string random_wandrer_topic = ros::this_node::getNamespace() + "randomwanderer/scan";
 
   // subscribe topics
-  laserSub = nh_.subscribe("randomwanderer/scan", 1, &RandomWandering::LaserCallback, this);
+  laserSub = nh_.subscribe(random_wandrer_topic, 1, &RandomWandering::LaserCallback, this);
 }
 
-
+void RandomWandering::updateSafetyDistance(){
+    set_safety_dist_footprint(safety_dist_b2body_, safety_dist_);
+}
 void RandomWandering::BeforePhysicsStep(const Timekeeper& timekeeper) {
-  currentLinearVelocity = body->physics_body_->GetLinearVelocity();
+
+  currentLinearVelocity = body_->GetLinearVelocity();
+
   DoStateTransition();
+  Color c=Color(0.93, 0.16, 0.16, 0.3);
+  safety_dist_body_->SetColor(c);
+  updateSafetyDistance();
+  float angle_soll = atan2(body_->GetLinearVelocity().x, body_->GetLinearVelocity().x);
+  // body_->SetTransform(body_->GetPosition(), angle_soll);
+  safety_dist_b2body_->SetTransform(body_->GetPosition(), angle_soll);
+  // //Set pedsim_agent velocity in flatland simulator to approach next position
+  // body_->SetLinearVelocity(body_->GetLinearVelocity());
+  safety_dist_b2body_->SetLinearVelocity(body_->GetLinearVelocity());
+  
+
+}
+
+// ToDo: Implelent that more elegant
+// Copied this function from model_body.cpp in flatland folder
+// This is necessary to be able to set the leg radius auto-generated with variance
+// original function just applies the defined radius in yaml-file.
+// other option: modify flatland package, but third-party
+void RandomWandering::set_safety_dist_footprint(b2Body * physics_body, double radius){
+    Vec2 center = Vec2(0, 0);
+    b2FixtureDef fixture_def;
+    ConfigFootprintDefSafetyDist(fixture_def);
+
+    b2CircleShape shape;
+    shape.m_p.Set(center.x, center.y);
+    shape.m_radius = radius;
+
+    fixture_def.shape = &shape;
+    b2Fixture* old_fix = physics_body->GetFixtureList();
+    physics_body->DestroyFixture(old_fix);
+    physics_body->CreateFixture(&fixture_def);
+}
+
+// ToDo: Implelent that more elegant
+// Copied this function from model_body.cpp in flatland folder
+// This is necessary to be able to set the leg radius auto-generated with variance
+// original function just applies the defined properties from yaml-file.
+// other option: modify flatland package, but third-party
+void RandomWandering::ConfigFootprintDefSafetyDist(b2FixtureDef &fixture_def) {
+    // configure physics properties
+    fixture_def.density = 0.0;
+    fixture_def.friction = 0.0;
+    fixture_def.restitution = 0.0;
+
+    // config collision properties
+    fixture_def.isSensor = true;
+    fixture_def.filter.groupIndex = 0;
+
+    // Defines that body is just seen in layer "2D" and "ped"
+    fixture_def.filter.categoryBits = 0x000a;
+
+    bool collision = false;
+    if (collision) {
+        // b2d docs: maskBits are "I collide with" bitmask
+        fixture_def.filter.maskBits = fixture_def.filter.categoryBits;
+    } else {
+        // "I will collide with nothing"
+        fixture_def.filter.maskBits = 0;
+    }
 }
 
 
