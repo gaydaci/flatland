@@ -3,6 +3,8 @@
 #include <flatland_server/model_plugin.h>
 #include <flatland_server/timekeeper.h>
 #include <flatland_server/types.h>
+#include <visualization_msgs/MarkerArray.h>
+#include <visualization_msgs/Marker.h>
 #include <geometry_msgs/Twist.h>
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
@@ -30,6 +32,11 @@ class RandomWandering : public ModelPlugin {
   float targetAngularVelocity;
   float angleGoal;
   ros::Subscriber laserSub;
+  ros::Subscriber robo_obstacle_sub_;        ///< Subscriber to pedsim agents state
+  ros::Publisher robo_obstacle_pub_;          ///< Publisher for agent state of  every pedsim agent
+    
+  visualization_msgs::Marker  robo_obstacle ;
+  visualization_msgs::MarkerArray  robo_obstacles  ;
   sensor_msgs::LaserScanConstPtr laserScan;
   bool obstacleNear;
   b2Body * body_;                            ///< Pointer to base-body
@@ -50,6 +57,19 @@ class RandomWandering : public ModelPlugin {
   int GetTurnDirection(float angle, float angle_goal);
   float RandomRange(const float range_lo, const float range_hi);
   
+    /**
+  * @name          AfterPhysicsStep
+  * @brief         override the AfterPhysicsStep method
+  * @param[in] timekeeper Object managing the simulation time
+  */
+  void AfterPhysicsStep(const Timekeeper& timekeeper) override;
+
+  /**
+    * @brief Callback for pedsim agent topic
+    * @param[in] agents array of all agents
+    */
+  void agentCallback(const visualization_msgs::MarkerArray& agents);
+
 
   void set_safety_dist_footprint(b2Body * physics_body_, double radius);
 
