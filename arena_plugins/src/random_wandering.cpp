@@ -27,7 +27,7 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
   // Subscribe to ped_sims agent topic to retrieve the agents position
   robo_obstacle_sub_ = nh_.subscribe(robo_obstacle_topic, 1, &RandomWandering::agentCallback, this);
   
-  ROS_WARN("robo_obstacle_topic  %s, agent_state_topic %s",robo_obstacle_topic.c_str(),agent_state_topic.c_str());
+  //ROS_WARN("robo_obstacle_topic  %s, agent_state_topic %s",robo_obstacle_topic.c_str(),agent_state_topic.c_str());
   robo_obstacle_pub_ = nh_.advertise<visualization_msgs::Marker>(agent_state_topic, 1);
 
 
