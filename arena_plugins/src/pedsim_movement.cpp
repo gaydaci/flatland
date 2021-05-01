@@ -20,6 +20,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     agents_ = NULL;
     state_ = LEFT;
     init_ = true;
+    human_radius=0.4;
 
     // random generator to generate leg_offset, step_length with variance.
     std::random_device r;
@@ -46,6 +47,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     std::string pedsim_agents_topic = ros::this_node::getNamespace() + reader.Get<std::string>("agent_topic");
 
     std::string agent_state_topic = reader.Get<std::string>("agent_state_pub", "agent_state");
+    std::string danger_zone_topic = reader.Get<std::string>("agent_state_pub", "danger_zone");
     
     double update_rate = reader.Get<double>("update_rate");
     // update_timer_.SetRate(update_rate);  // timer to update global movement of agent
@@ -59,8 +61,9 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
 
     // Subscribe to ped_sims agent topic to retrieve the agents position
     pedsim_agents_sub_ = nh_.subscribe(pedsim_agents_topic, 1, &PedsimMovement::agentCallback, this);
-    // publish the social state of every pedestrain
+    // publish the state of every pedestrain
     agent_state_pub_ = nh_.advertise<pedsim_msgs::AgentState>(agent_state_topic, 1);
+    danger_zone_pub_ = nh_.advertise<flatland_msgs::DangerZone>(danger_zone_topic, 1);
 
     //Get bodies of pedestrian
     body_ = GetModel()->GetBody(reader.Get<std::string>("base_body"))->GetPhysicsBody();
@@ -94,7 +97,9 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if (agents_ == NULL) { //!update_timer_.CheckUpdate(timekeeper) || 
         return;
     }
-
+    float vel_x; //
+    float vel_y; // 
+    float vel;
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
     // ROS_WARN("name space: %s",ns_str.c_str());
@@ -105,29 +110,6 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
-            //change visualization of the human if they are talking 
-            if (person.social_state=="\"talking\""){
-                // ROS_INFO("change color because talking");
-                //r g b a
-                Color c=Color(0.93, 0.16, 0.16, 0.3);
-                safety_dist_body_->SetColor(c);
-                safety_dist_=0.5;
-                updateSafetyDistance();
-            }else if(person.social_state=="\"running\""){
-                ROS_INFO("change color because running");
-                //r g b a
-                Color c=Color(0.56, 0.7, 0, 0.3);
-                safety_dist_body_->SetColor(c);
-                safety_dist_=1.5;
-                updateSafetyDistance();
-            }else if(person.social_state=="\"individual_moving\""){
-                // ROS_INFO("change color because walking");
-                //r g b a
-                Color c=Color(0.26, 0.3, 0, 0.3);//[0.26, 0.3, 0, 0.3]
-                safety_dist_body_->SetColor(c);
-                safety_dist_ = safety_dist_original_;
-                updateSafetyDistance();
-            }
             break;
         }
     };
@@ -142,9 +124,55 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         resetLegPosition(person.twist.linear.x, person.twist.linear.y, 0.0);
         init_ = false;
     }
+    //modeling of safety distance
+    vel_x = person.twist.linear.x; //
+    vel_y = person.twist.linear.y; // 
+    vel = sqrt(vel_x*vel_x+vel_y*vel_y);
+    //change visualization of the human if they are talking 
+    // if (person.social_state=="\"talking\""){
+    //     //r g b a
+    //     Color c=Color(0.93, 0.16, 0.16, 0.3);
+    //     safety_dist_body_->SetColor(c);
+    //     safety_dist_=0.5;
+    //     updateSafetyDistance();
+    // }else if(person.social_state=="\"running\""){
+    //     //r g b a
+    //     Color c=Color(0.56, 0.7, 0, 0.3);
+    //     safety_dist_body_->SetColor(c);
+    //     safety_dist_=1.5;
+    //     updateSafetyDistance();
+    // }else if(person.social_state=="\"individual_moving\""){
+    //     //r g b a
+    //     Color c=Color(0.26, 0.3, 0, 0.3);//[0.26, 0.3, 0, 0.3]
+    //     safety_dist_body_->SetColor(c);
+    //     safety_dist_ = safety_dist_original_;
+    //     updateSafetyDistance();
+    // }
+    if(vel>0.01){ //this threshold is used for filtering of some rare cases, no influence for performance
+        calculateDangerZone(vel_x, vel_y);
+        double velocityAngle=atan(vel_y/vel_x);
+        std::vector<double> velocityAngles={velocityAngle, velocityAngle+M_PI};
+        for(int i=0;i<2;i++){
+            double x=pL[0]*cos(velocityAngles[i]);
+            double y=pL[0]*sin(velocityAngles[i]);
+            if(x*vel_x+y*vel_y<0){
+                dangerZoneCenter.push_back(person.pose.position.x+x);
+                dangerZoneCenter.push_back(person.pose.position.y+y);
+                break;
+            }
+        }
+    }else{// if vel <0.01, it is treated as stopped
+        dangerZoneRadius=safety_dist_original_;
+        dangerZoneAngle=2*M_PI;
+        dangerZoneCenter.clear();
+        dangerZoneCenter.push_back(person.pose.position.x);
+        dangerZoneCenter.push_back(person.pose.position.y);
+    }
+    //
+    dangerZone.dangerZoneRadius=dangerZoneRadius;
+    dangerZone.dangerZoneAngle=dangerZoneAngle;
+    dangerZone.dangerZoneCenter=dangerZoneCenter;
 
-    float vel_x =person.twist.linear.x;; //
-    float vel_y =person.twist.linear.y;; // 
     float angle_soll = atan2(vel_y, vel_x);
     float angle_ist = body_->GetAngle();
 
@@ -155,9 +183,6 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     //Set pedsim_agent velocity in flatland simulator to approach next position
     body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
     safety_dist_b2body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
-    
-
-    float vel=sqrt(vel_x*vel_x+vel_y*vel_y);
     
     //set each leg to the appropriate position.
     if (toggle_leg_movement_){
@@ -218,7 +243,7 @@ void PedsimMovement::agentCallback(const pedsim_msgs::AgentStatesConstPtr& agent
 // original function just applies the defined radius in yaml-file.
 // other option: modify flatland package, but third-party
 void PedsimMovement::set_circular_footprint(b2Body * physics_body, double radius){
-    Vec2 center = Vec2(0, 0);
+    Vec2 center = Vec2(0.0, 0.0);
     b2FixtureDef fixture_def;
     ConfigFootprintDef(fixture_def);
 
@@ -238,7 +263,7 @@ void PedsimMovement::set_circular_footprint(b2Body * physics_body, double radius
 // original function just applies the defined radius in yaml-file.
 // other option: modify flatland package, but third-party
 void PedsimMovement::set_safety_dist_footprint(b2Body * physics_body, double radius){
-    Vec2 center = Vec2(0, 0);
+    Vec2 center = Vec2(0.0, 0.0);
     b2FixtureDef fixture_def;
     ConfigFootprintDefSafetyDist(fixture_def);
 
@@ -308,6 +333,150 @@ void PedsimMovement::ConfigFootprintDefSafetyDist(b2FixtureDef &fixture_def) {
     }
 }
 
+void PedsimMovement::calculateDangerZone(float vx, float vy){
+    float slopeBE1;
+    float slopeBE2;
+    float mv = 1.5;
+    float av =1.5;
+    float r_static = 0.7;
+    float vel = sqrt(vx*vx+vy*vy);
+    float radius = mv*vel + r_static;
+    float dangerZoneAngle = 11*M_PI / 6* exp(-1.4*av*vel) +  M_PI/6;
+    std::vector<float> pA = {0.0, 0.0};
+    std::vector<float> pB = {radius*cos(dangerZoneAngle/2), radius*sin(dangerZoneAngle/2)};
+    std::vector<float> pC = {radius*cos(- dangerZoneAngle/2), radius*sin(- dangerZoneAngle/2)};
+    float diffY=-pB[1];
+    float diffX=-pB[0];
+    float a = human_radius*human_radius - diffX*diffX;
+    float b = 2*diffX*diffY;
+    float c = human_radius*human_radius - diffY*diffY;
+    float h = b*b - 4*a*c;
+    if(h<0){
+        ROS_INFO("no valid root for m+++++h=[%f]",h);
+    }else{
+        slopeBE1 = (-b+sqrt(h))/(2*a);
+        slopeBE2 = (-b-sqrt(h))/(2*a);
+    }
+    float interceptBE1 = pB[1] - slopeBE1*pB[0];
+    float interceptBE2 = pB[1] - slopeBE2*pB[0];
+    // float Kv = 0.0;
+    // float interceptAV=0.0;
+    std::vector<float> interceptBE={interceptBE1, interceptBE2};
+    std::vector<float> slopeBE={slopeBE1, slopeBE2};
+    // std::vector<float> vAE;
+    // std::vector<float> velocityVector = {vx, vy};
+    for(int i= 0; i< 2; i++)
+    {    
+        float x = (- interceptBE[i])/(slopeBE[i]);
+        float y = slopeBE[i]*x + interceptBE[i];
+        float vAEx=x;
+        float vAEy=y;
+        if(vAEx*vel<0){
+            pL.push_back(x);
+            pL.push_back(y);
+            break;
+        }
+    }
+    std::vector<float> vEB = {pL[0]-pB[0], pL[1]-pB[1]};
+    std::vector<float> vEA = {pL[0]-pA[0], pL[1]-pA[1]};
+    float dotProductEBEA = vEB[0]*vEA[0]+vEB[1]*vEA[1];
+    float normEB = sqrt(vEB[0]*vEB[0]+vEB[1]*vEB[1]);
+    float normEA = sqrt(vEA[0]*vEA[0]+vEA[1]*vEA[1]);
+    if (dangerZoneAngle < M_PI){
+        float c1 = dotProductEBEA/(normEB*normEA);
+        //clamp(-1,1)
+        float c=c1>1 ? 1 : c1;
+        c=c1<-1? -1 :c1;
+        float angle = acos(c);
+        dangerZoneAngle = 2*angle;
+    }
+    dangerZoneRadius = radius;
+    // ROS_INFO("safty model pE0[%f]radius[%f]dangerZoneAngle[%f]", pL[0], radius, dangerZoneAngle);
+    updateDangerousZone(pL[0], radius, dangerZoneAngle);
+}
+
+bool PedsimMovement::isTheRightE(float vAEx, float vAEy, float vx, float vy){
+    return vAEx*vx + vAEy*vy <0;
+}
+void PedsimMovement::updateDangerousZone(float p, float radius, float angle){
+    //destroy the old fixtures 
+    for(int i = 0; i<12; i++){
+        b2Fixture* old_fix = safety_dist_b2body_->GetFixtureList();
+        if(old_fix==nullptr){break;}
+        safety_dist_b2body_->DestroyFixture(old_fix);
+    }
+    // create new feature
+    b2FixtureDef fixture_def;
+    // configure physics properties
+    fixture_def.density = 1.0;
+    fixture_def.friction = 0.0;
+    fixture_def.restitution = 0.0;
+    // config collision properties
+    fixture_def.isSensor = true;
+    fixture_def.filter.groupIndex = 0;
+    // Defines that body is just seen in layer "2D" and "ped"
+    fixture_def.filter.categoryBits = 0x000a;
+    bool collision = false;
+    if (collision) {
+        // b2d docs: maskBits are "I collide with" bitmask
+        fixture_def.filter.maskBits = fixture_def.filter.categoryBits;
+    } else {
+        // "I will collide with nothing"
+        fixture_def.filter.maskBits = 0;
+    }
+    float delta = angle/10;
+    float last_angle = -angle/2;
+    float next_angle;
+    float v1 = radius*cos(last_angle);
+    float v2 = radius*sin(last_angle);
+    Color c=Color(0.93, 0.16, 0.16, 0.3);
+    b2PolygonShape shape;
+    b2Vec2 verts[3];
+    for(int i = 0; i<10; i++){
+        next_angle= -angle/2 + (i+1)*delta;
+        verts[0].Set(0.0, 0.0);
+        verts[1].Set(v1, v2);
+        v1= radius*cos(next_angle);
+        v2= radius*sin(next_angle);
+        verts[2].Set(v1, v2);
+        shape.Set(verts, 3);
+        fixture_def.shape = &shape;
+        safety_dist_b2body_->CreateFixture(&fixture_def);
+    }    
+    if(p==0.0){
+        verts[0].Set(0.0, 0.0);
+        v1= radius*cos(-angle/2);
+        v2= radius*sin(-angle/2);
+        verts[1].Set(v1, v2);
+        v1= radius*cos(angle/2);
+        v2= radius*sin(angle/2);
+        verts[2].Set(v1, v2);
+        shape.Set(verts, 3);
+        fixture_def.shape = &shape;
+        safety_dist_b2body_->CreateFixture(&fixture_def);
+    }else{
+        //first vertex
+        verts[0].Set(0.0, 0.0);
+        verts[1].Set(p, 0.0);
+        v1= radius*cos(angle/2);
+        v2= radius*sin(angle/2);
+        verts[2].Set(v1, v2);
+        shape.Set(verts, 3);
+        fixture_def.shape = &shape;
+        safety_dist_b2body_->CreateFixture(&fixture_def);
+        //second vertex
+        verts[0].Set(0.0, 0.0);
+        verts[1].Set(p, 0.0);
+        v1= radius*cos(-angle/2);
+        v2= radius*sin(-angle/2);
+        verts[2].Set(v1, v2);
+        shape.Set(verts, 3);
+        fixture_def.shape = &shape;
+        safety_dist_b2body_->CreateFixture(&fixture_def);
+    }
+    safety_dist_body_->SetColor(c);
+}
+
 void PedsimMovement::AfterPhysicsStep(const Timekeeper& timekeeper) {
   bool publish = update_timer_.CheckUpdate(timekeeper);
   if (publish) {
@@ -315,6 +484,7 @@ void PedsimMovement::AfterPhysicsStep(const Timekeeper& timekeeper) {
     // publish agent state for every human
     //publish the agent state 
     agent_state_pub_.publish(person);
+    danger_zone_pub_.publish(dangerZone);
   }
 }
 };
