@@ -130,7 +130,7 @@ bool ServiceManager::SpawnModels(flatland_msgs::SpawnModels::Request &request,
                                 flatland_msgs::SpawnModels::Response &response) {
   ros::WallTime start = ros::WallTime::now();
   ROS_DEBUG_NAMED("ServiceManager",
-                  "Request to spawn %d models", request.models.size());
+                  "Request to spawn %ld models", request.models.size());
   response.success = true;
   response.message = "";
   for(int i_model=0; i_model < request.models.size(); i_model++){
@@ -153,7 +153,7 @@ bool ServiceManager::SpawnModels(flatland_msgs::SpawnModels::Request &request,
 bool ServiceManager::RespawnModels(flatland_msgs::RespawnModels::Request &request,
                                 flatland_msgs::RespawnModels::Response &response) {
   ROS_DEBUG_NAMED("ServiceManager",
-                  "Respawning %d models", request.new_models.size());
+                  "Respawning %ld models", request.new_models.size());
   // ROS_INFO("ServiceManager,Respawning %d models", request.new_models.size());
   // ROS_INFO("Servicemanger reuse (%d) human",request.old_model_names.size()); 
    
@@ -260,7 +260,7 @@ bool ServiceManager::DeleteModels(
     flatland_msgs::DeleteModels::Response &response) {
 
   ros::WallTime start = ros::WallTime::now();
-  ROS_DEBUG_NAMED("ServiceManager", "Deleted %d models",
+  ROS_DEBUG_NAMED("ServiceManager", "Deleted %ld models",
                   request.name.size());
   response.success = true;
   response.message = "";
@@ -272,7 +272,6 @@ bool ServiceManager::DeleteModels(
       response.message = std::string(e.what());
     }
   }
-  ROS_WARN("Delete models in flatland: %f", (ros::WallTime::now() - start).toSec());
   return true;
 }
 
