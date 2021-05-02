@@ -2,8 +2,8 @@
 #include <math.h>
 #include <pluginlib/class_list_macros.h>
 #include <ros/console.h>
-
 #include <random>
+using namespace flatland_server;
 
 namespace flatland_plugins {
 using namespace std;
@@ -22,6 +22,14 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
   safety_dist_b2body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"))->GetPhysicsBody();
   safety_dist_body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"));
   updateSafetyDistance();
+  std::string robo_obstacle_topic = ros::this_node::getNamespace() + "/flatland_server/debug/model/"+GetModel()->GetName() ;
+  std::string agent_state_topic = ros::this_node::getNamespace()+ "/"+GetModel()->GetName() ;   
+  // Subscribe to ped_sims agent topic to retrieve the agents position
+  robo_obstacle_sub_ = nh_.subscribe(robo_obstacle_topic, 1, &RandomWandering::agentCallback, this);
+  
+  //ROS_WARN("robo_obstacle_topic  %s, agent_state_topic %s",robo_obstacle_topic.c_str(),agent_state_topic.c_str());
+  robo_obstacle_pub_ = nh_.advertise<visualization_msgs::Marker>(agent_state_topic, 1);
+
 
   if (body_ == nullptr) {
     throw YAMLException("Body with the name" + Q(body_name) + "does not exits");
@@ -38,13 +46,30 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
   laserSub = nh_.subscribe(random_wandrer_topic, 1, &RandomWandering::LaserCallback, this);
 }
 
+void RandomWandering::agentCallback(const visualization_msgs::MarkerArray& agents){
+    robo_obstacles = agents;
+}
+
+void RandomWandering::AfterPhysicsStep(const Timekeeper& timekeeper) {
+  bool publish = update_timer_.CheckUpdate(timekeeper);
+  if (publish) {
+
+    //publish the agent state 
+    robo_obstacle_pub_.publish(robo_obstacle);
+  }
+}
+
+
 void RandomWandering::updateSafetyDistance(){
     set_safety_dist_footprint(safety_dist_b2body_, safety_dist_);
 }
 void RandomWandering::BeforePhysicsStep(const Timekeeper& timekeeper) {
-
+  //   if (robo_obstacles == NULL) {
+  //     return;
+  // }
   currentLinearVelocity = body_->GetLinearVelocity();
-
+  // ROS_INFO("Name of robo obstacle %s ",GetModel()->GetName().c_str());
+  robo_obstacle =robo_obstacles.markers[0];
   DoStateTransition();
   Color c=Color(0.93, 0.16, 0.16, 0.3);
   safety_dist_body_->SetColor(c);

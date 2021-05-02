@@ -57,6 +57,8 @@ void VehicleMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     std::string ns_str = GetModel()->GetNameSpace();
     // ROS_WARN("name space: %s",ns_str.c_str());
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
+    // ROS_INFO("%s ",ns_str.c_str());
+    // ROS_INFO("%d ",id_);
 
     //Find appropriate agent in list
     for (int i = 0; i < (int) agents_->agent_states.size(); i++){
