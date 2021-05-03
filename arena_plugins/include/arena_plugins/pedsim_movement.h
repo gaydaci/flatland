@@ -13,11 +13,12 @@
 #include <flatland_server/types.h>
 #include <pedsim_msgs/AgentStates.h>
 #include <pedsim_msgs/AgentState.h>
+#include <flatland_msgs/DangerZone.h>
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <arena_plugins/triangle_profile.h>
-#include<cmath> 
-
+#include<cmath>
+#include <algorithm>
 
 #ifndef FLATLAND_PLUGINS_PEDSIM_MOVEMENT_H
 #define FLATLAND_PLUGINS_PEDSIM_MOVEMENT_H
@@ -100,6 +101,13 @@ class PedsimMovement : public ModelPlugin {
     double safety_dist_original_;
     std::string body_frame_;                  ///< frame name of base-body
 
+    float human_radius;
+    float dangerZoneRadius;
+    float dangerZoneAngle;                                          //dangerZoneAngle
+    std::vector<float> pL;      //dangerZoneCenter in the agent frame             
+    std::vector<double> dangerZoneCenter; //dangerZoneCenter in absolute frame  
+    ros::Publisher danger_zone_pub_; 
+    flatland_msgs::DangerZone dangerZone;
     flatland_plugins::TriangleProfile* wp_;
 
     /**
@@ -151,6 +159,19 @@ class PedsimMovement : public ModelPlugin {
    * Body Footprint of safety dist circle will be set.
    */
     void updateSafetyDistance();
+
+    /**
+   * @brief visualize the dangerous zone according to the velocities of human.
+   * Body Footprints of dangrous zones will be set.
+   */
+    void updateDangerousZone(float p, float radius, float angle);
+
+  /**
+   * @brief calculate the dangerous zone
+   * */
+  void calculateDangerZone(float vx, float vy);
+
+  bool isTheRightE(float vAEx, float vAEy, float vx, float vy);
 
 };
 };
