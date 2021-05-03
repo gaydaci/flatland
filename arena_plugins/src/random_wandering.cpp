@@ -71,6 +71,8 @@ void RandomWandering::BeforePhysicsStep(const Timekeeper& timekeeper) {
   // ROS_INFO("Name of robo obstacle %s ",GetModel()->GetName().c_str());
   robo_obstacle =robo_obstacles.markers[0];
   DoStateTransition();
+  robo_obstacle.points[0].x = currentLinearVelocity.x;
+  robo_obstacle.points[0].y = currentLinearVelocity.y;
   Color c=Color(0.93, 0.16, 0.16, 0.3);
   safety_dist_body_->SetColor(c);
   updateSafetyDistance();
