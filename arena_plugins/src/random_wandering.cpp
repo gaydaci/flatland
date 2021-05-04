@@ -64,9 +64,9 @@ void RandomWandering::updateSafetyDistance(){
     set_safety_dist_footprint(safety_dist_b2body_, safety_dist_);
 }
 void RandomWandering::BeforePhysicsStep(const Timekeeper& timekeeper) {
-  //   if (robo_obstacles == NULL) {
-  //     return;
-  // }
+  if (robo_obstacles.markers.size() == 0) {
+    return;
+  }
   currentLinearVelocity = body_->GetLinearVelocity();
   // ROS_INFO("Name of robo obstacle %s ",GetModel()->GetName().c_str());
   robo_obstacle =robo_obstacles.markers[0];
