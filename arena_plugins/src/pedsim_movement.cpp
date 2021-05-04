@@ -148,11 +148,14 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     //     safety_dist_ = safety_dist_original_;
     //     updateSafetyDistance();
     // }
+    dangerZoneCenter.clear();
     if(vel>0.01){ //this threshold is used for filtering of some rare cases, no influence for performance
-        calculateDangerZone(vel_x, vel_y);
+        calculateDangerZone(vel);
+        velocityAngles.clear();
         double velocityAngle=atan(vel_y/vel_x);
-        std::vector<double> velocityAngles={velocityAngle, velocityAngle+M_PI};
-        for(int i=0;i<2;i++){
+        velocityAngles.push_back(velocityAngle);
+        velocityAngles.push_back(velocityAngle+M_PI);
+        for(int i=0; i<2; i++){
             double x=pL[0]*cos(velocityAngles[i]);
             double y=pL[0]*sin(velocityAngles[i]);
             if(x*vel_x+y*vel_y<0){
@@ -163,15 +166,16 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         }
     }else{// if vel <0.01, it is treated as stopped
         dangerZoneRadius=safety_dist_original_;
-        dangerZoneAngle=2*M_PI;
-        dangerZoneCenter.clear();
+        dangerZoneAngle=2*M_PI;        
         dangerZoneCenter.push_back(person.pose.position.x);
         dangerZoneCenter.push_back(person.pose.position.y);
     }
     //
+    dangerZone.header=person.header;
     dangerZone.dangerZoneRadius=dangerZoneRadius;
     dangerZone.dangerZoneAngle=dangerZoneAngle;
     dangerZone.dangerZoneCenter=dangerZoneCenter;
+
 
     float angle_soll = atan2(vel_y, vel_x);
     float angle_ist = body_->GetAngle();
@@ -333,66 +337,63 @@ void PedsimMovement::ConfigFootprintDefSafetyDist(b2FixtureDef &fixture_def) {
     }
 }
 
-void PedsimMovement::calculateDangerZone(float vx, float vy){
-    float slopeBE1;
-    float slopeBE2;
-    float mv = 1.5;
-    float av =1.5;
-    float r_static = 0.7;
-    float vel = sqrt(vx*vx+vy*vy);
-    float radius = mv*vel + r_static;
-    float dangerZoneAngle = 11*M_PI / 6* exp(-1.4*av*vel) +  M_PI/6;
-    std::vector<float> pA = {0.0, 0.0};
-    std::vector<float> pB = {radius*cos(dangerZoneAngle/2), radius*sin(dangerZoneAngle/2)};
-    std::vector<float> pC = {radius*cos(- dangerZoneAngle/2), radius*sin(- dangerZoneAngle/2)};
-    float diffY=-pB[1];
-    float diffX=-pB[0];
-    float a = human_radius*human_radius - diffX*diffX;
-    float b = 2*diffX*diffY;
-    float c = human_radius*human_radius - diffY*diffY;
-    float h = b*b - 4*a*c;
+void PedsimMovement::calculateDangerZone(float vel_agent){
+    interceptBE.clear();
+    slopeBE.clear();
+    pL.clear();
+    dangerZoneRadius = mv*vel_agent + r_static;
+    dangerZoneAngle = 11*M_PI / 6* exp(-1.4*av*vel_agent) +  M_PI/6;
+    pB_1 = dangerZoneRadius*cos(dangerZoneAngle/2);
+    pB_2 = dangerZoneRadius*sin(dangerZoneAngle/2);
+    // pC_1 = dangerZoneRadius*cos(- dangerZoneAngle/2);
+    // pC_2= dangerZoneRadius*sin(- dangerZoneAngle/2;
+    // float diffY=-pB[1];
+    // float diffX=-pB[0];
+    a = human_radius*human_radius - pB_1*pB_1;
+    b = 2*pB_1*pB_2;
+    c = human_radius*human_radius - pB_2*pB_2;
+    h = b*b - 4*a*c;
     if(h<0){
         ROS_INFO("no valid root for m+++++h=[%f]",h);
     }else{
         slopeBE1 = (-b+sqrt(h))/(2*a);
         slopeBE2 = (-b-sqrt(h))/(2*a);
     }
-    float interceptBE1 = pB[1] - slopeBE1*pB[0];
-    float interceptBE2 = pB[1] - slopeBE2*pB[0];
-    // float Kv = 0.0;
-    // float interceptAV=0.0;
-    std::vector<float> interceptBE={interceptBE1, interceptBE2};
-    std::vector<float> slopeBE={slopeBE1, slopeBE2};
-    // std::vector<float> vAE;
-    // std::vector<float> velocityVector = {vx, vy};
+    interceptBE1 = pB_2 - slopeBE1*pB_1;
+    interceptBE2 = pB_2 - slopeBE2*pB_1;
+    interceptBE.push_back(interceptBE1);
+    interceptBE.push_back(interceptBE2);
+    slopeBE.push_back(slopeBE1);
+    slopeBE.push_back(slopeBE2);
     for(int i= 0; i< 2; i++)
     {    
         float x = (- interceptBE[i])/(slopeBE[i]);
         float y = slopeBE[i]*x + interceptBE[i];
         float vAEx=x;
         float vAEy=y;
-        if(vAEx*vel<0){
+        if(vAEx*vel_agent<0){
             pL.push_back(x);
             pL.push_back(y);
             break;
         }
     }
-    std::vector<float> vEB = {pL[0]-pB[0], pL[1]-pB[1]};
-    std::vector<float> vEA = {pL[0]-pA[0], pL[1]-pA[1]};
-    float dotProductEBEA = vEB[0]*vEA[0]+vEB[1]*vEA[1];
-    float normEB = sqrt(vEB[0]*vEB[0]+vEB[1]*vEB[1]);
-    float normEA = sqrt(vEA[0]*vEA[0]+vEA[1]*vEA[1]);
+    float vLBx=pL[0]-pB_1;
+    float vLBy=pL[1]-pB_2;
+    float vLAx=pL[0];
+    float vLAy=pL[1];
+    float dotProductLBLA =vLBx*vLAx+vLBy*vLAy;
+    float normLB = sqrt(vLBx*vLBx+vLBy*vLBy);
+    float normLA = sqrt(vLAx*vLAx+vLAy*vLAy);
     if (dangerZoneAngle < M_PI){
-        float c1 = dotProductEBEA/(normEB*normEA);
+        float c1 = dotProductLBLA/(normLB*normLA);
         //clamp(-1,1)
         float c=c1>1 ? 1 : c1;
         c=c1<-1? -1 :c1;
         float angle = acos(c);
         dangerZoneAngle = 2*angle;
     }
-    dangerZoneRadius = radius;
-    // ROS_INFO("safty model pE0[%f]radius[%f]dangerZoneAngle[%f]", pL[0], radius, dangerZoneAngle);
-    updateDangerousZone(pL[0], radius, dangerZoneAngle);
+    // ROS_INFO("safty model pE0[%f]dangerZoneRadius[%f]dangerZoneAngle[%f]", pL[0], dangerZoneRadius, dangerZoneAngle);
+    updateDangerousZone(pL[0], dangerZoneRadius, dangerZoneAngle);
 }
 
 bool PedsimMovement::isTheRightE(float vAEx, float vAEy, float vx, float vy){
