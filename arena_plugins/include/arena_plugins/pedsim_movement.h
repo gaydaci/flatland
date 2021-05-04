@@ -110,6 +110,26 @@ class PedsimMovement : public ModelPlugin {
     flatland_msgs::DangerZone dangerZone;
     flatland_plugins::TriangleProfile* wp_;
 
+    //parameters for calculating danger zone
+    float slopeBE1;
+    float slopeBE2;
+    float mv = 1.5;
+    float av =1.5;
+    float r_static = 0.7;
+    // float dangerZoneAngle;
+    // std::vector<float> pA
+    float pB_1;
+    float pB_2;
+    // std::vector<float> pC;
+    float a;
+    float b; 
+    float c; 
+    float h;
+    float interceptBE1;
+    float interceptBE2;
+    std::vector<float> interceptBE;
+    std::vector<float> slopeBE;
+    std::vector<double> velocityAngles;
     /**
      * @brief Callback for pedsim agent topic
      * @param[in] agents array of all agents
@@ -169,7 +189,7 @@ class PedsimMovement : public ModelPlugin {
   /**
    * @brief calculate the dangerous zone
    * */
-  void calculateDangerZone(float vx, float vy);
+  void calculateDangerZone(float vel);
 
   bool isTheRightE(float vAEx, float vAEy, float vx, float vy);
 
