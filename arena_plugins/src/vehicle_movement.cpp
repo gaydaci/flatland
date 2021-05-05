@@ -25,7 +25,6 @@ void VehicleMovement::OnInitialize(const YAML::Node &config){
     std::string pedsim_agents_topic = ros::this_node::getNamespace() + reader.Get<std::string>("agent_topic");
     
     std::string agent_state_topic = reader.Get<std::string>("agent_state_pub", "agent_state");
-    double update_rate = reader.Get<double>("update_rate");
 
     // Subscribe to ped_sims agent topic to retrieve the agents position
     pedsim_agents_sub_ = nh_.subscribe(pedsim_agents_topic, 1, &VehicleMovement::agentCallback, this);
