@@ -101,10 +101,14 @@ class PedsimMovement : public ModelPlugin {
     double safety_dist_original_;
     std::string body_frame_;                  ///< frame name of base-body
 
+    bool useDangerZone;
+    float vel_x;
+    float vel_y;
+    float vel;
     float human_radius;
     float dangerZoneRadius;
-    float dangerZoneAngle;                                          //dangerZoneAngle
-    std::vector<float> pL;      //dangerZoneCenter in the agent frame             
+    float dangerZoneAngle;                                    //dangerZoneAngle
+    std::vector<float> pL;                                         //dangerZoneCenter in the agent frame             
     std::vector<double> dangerZoneCenter; //dangerZoneCenter in absolute frame  
     ros::Publisher danger_zone_pub_; 
     flatland_msgs::DangerZone dangerZone;
@@ -113,10 +117,9 @@ class PedsimMovement : public ModelPlugin {
     //parameters for calculating danger zone
     float slopeBE1;
     float slopeBE2;
-    float mv = 1.5;
-    float av =1.5;
-    float r_static = 0.7;
-    // float dangerZoneAngle;
+    float mv;
+    float av;
+    float r_static;
     // std::vector<float> pA
     float pB_1;
     float pB_2;
@@ -191,7 +194,7 @@ class PedsimMovement : public ModelPlugin {
    * */
   void calculateDangerZone(float vel);
 
-  bool isTheRightE(float vAEx, float vAEy, float vx, float vy);
+  // bool isTheRightE(float vAEx, float vAEy, float vx, float vy);
 
 };
 };

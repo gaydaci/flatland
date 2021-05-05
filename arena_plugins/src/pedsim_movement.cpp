@@ -21,7 +21,10 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     state_ = LEFT;
     init_ = true;
     human_radius=0.4;
-
+    mv = 1.5;
+    av =1.5;
+    r_static = 0.7;
+    useDangerZone=false; //TODO: will be the parameter set in launch file
     // random generator to generate leg_offset, step_length with variance.
     std::random_device r;
     std::default_random_engine generator(r());
@@ -78,7 +81,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     updateSafetyDistance();
 
     // check if valid bodies are given
-    if (body_ == nullptr || left_leg_body_ == nullptr || right_leg_body_ == nullptr || safety_dist_b2body_==nullptr) {
+    if (body_ == nullptr || left_leg_body_ == nullptr || right_leg_body_ == nullptr || safety_dist_b2body_==nullptr) {s
         throw flatland_server::YAMLException("Body with with the given name does not exist");
     }
 }
@@ -97,9 +100,6 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if (agents_ == NULL) { //!update_timer_.CheckUpdate(timekeeper) || 
         return;
     }
-    float vel_x; //
-    float vel_y; // 
-    float vel;
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
     // ROS_WARN("name space: %s",ns_str.c_str());
@@ -128,53 +128,58 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     vel_x = person.twist.linear.x; //
     vel_y = person.twist.linear.y; // 
     vel = sqrt(vel_x*vel_x+vel_y*vel_y);
-    //change visualization of the human if they are talking 
-    // if (person.social_state=="\"talking\""){
-    //     //r g b a
-    //     Color c=Color(0.93, 0.16, 0.16, 0.3);
-    //     safety_dist_body_->SetColor(c);
-    //     safety_dist_=0.5;
-    //     updateSafetyDistance();
-    // }else if(person.social_state=="\"running\""){
-    //     //r g b a
-    //     Color c=Color(0.56, 0.7, 0, 0.3);
-    //     safety_dist_body_->SetColor(c);
-    //     safety_dist_=1.5;
-    //     updateSafetyDistance();
-    // }else if(person.social_state=="\"individual_moving\""){
-    //     //r g b a
-    //     Color c=Color(0.26, 0.3, 0, 0.3);//[0.26, 0.3, 0, 0.3]
-    //     safety_dist_body_->SetColor(c);
-    //     safety_dist_ = safety_dist_original_;
-    //     updateSafetyDistance();
-    // }
-    dangerZoneCenter.clear();
-    if(vel>0.01){ //this threshold is used for filtering of some rare cases, no influence for performance
-        calculateDangerZone(vel);
-        velocityAngles.clear();
-        double velocityAngle=atan(vel_y/vel_x);
-        velocityAngles.push_back(velocityAngle);
-        velocityAngles.push_back(velocityAngle+M_PI);
-        for(int i=0; i<2; i++){
-            double x=pL[0]*cos(velocityAngles[i]);
-            double y=pL[0]*sin(velocityAngles[i]);
-            if(x*vel_x+y*vel_y<0){
-                dangerZoneCenter.push_back(person.pose.position.x+x);
-                dangerZoneCenter.push_back(person.pose.position.y+y);
-                break;
-            }
+    //change visualization of the human if they are talking
+    if(useDangerZone==false){
+        if (person.social_state=="\"talking\""){
+            //r g b a
+            Color c=Color(0.93, 0.16, 0.16, 0.3);
+            safety_dist_body_->SetColor(c);
+            safety_dist_=0.5;
+            updateSafetyDistance();
+        }else if(person.social_state=="\"running\""){
+            //r g b a
+            Color c=Color(0.56, 0.7, 0, 0.3);
+            safety_dist_body_->SetColor(c);
+            safety_dist_=1.5;
+            updateSafetyDistance();
+        }else if(person.social_state=="\"individual_moving\""){
+            //r g b a
+            Color c=Color(0.26, 0.3, 0, 0.3);//[0.26, 0.3, 0, 0.3]
+            safety_dist_body_->SetColor(c);
+            safety_dist_ = safety_dist_original_;
+            updateSafetyDistance();
         }
-    }else{// if vel <0.01, it is treated as stopped
-        dangerZoneRadius=safety_dist_original_;
-        dangerZoneAngle=2*M_PI;        
-        dangerZoneCenter.push_back(person.pose.position.x);
-        dangerZoneCenter.push_back(person.pose.position.y);
+    }else{
+        dangerZoneCenter.clear();
+        if(vel>0.01){ //this threshold is used for filtering of some rare cases, no influence for performance
+            calculateDangerZone(vel);
+            velocityAngles.clear();
+            double velocityAngle=atan(vel_y/vel_x);
+            velocityAngles.push_back(velocityAngle);
+            velocityAngles.push_back(velocityAngle+M_PI);
+            for(int i=0; i<2; i++){
+                double x=pL[0]*cos(velocityAngles[i]);
+                double y=pL[0]*sin(velocityAngles[i]);
+                if(x*vel_x+y*vel_y<0){
+                    dangerZoneCenter.push_back(person.pose.position.x+x);
+                    dangerZoneCenter.push_back(person.pose.position.y+y);
+                    break;
+                }
+            }
+        }else{// if vel <0.01, it is treated as stopped
+            dangerZoneRadius=safety_dist_original_;
+            dangerZoneAngle=2*M_PI;        
+            dangerZoneCenter.push_back(person.pose.position.x);
+            dangerZoneCenter.push_back(person.pose.position.y);
+        }
+        //
+        dangerZone.header=person.header;
+        dangerZone.dangerZoneRadius=dangerZoneRadius;
+        dangerZone.dangerZoneAngle=dangerZoneAngle;
+        dangerZone.dangerZoneCenter=dangerZoneCenter;
     }
-    //
-    dangerZone.header=person.header;
-    dangerZone.dangerZoneRadius=dangerZoneRadius;
-    dangerZone.dangerZoneAngle=dangerZoneAngle;
-    dangerZone.dangerZoneCenter=dangerZoneCenter;
+
+
 
 
     float angle_soll = atan2(vel_y, vel_x);
@@ -396,9 +401,9 @@ void PedsimMovement::calculateDangerZone(float vel_agent){
     updateDangerousZone(pL[0], dangerZoneRadius, dangerZoneAngle);
 }
 
-bool PedsimMovement::isTheRightE(float vAEx, float vAEy, float vx, float vy){
-    return vAEx*vx + vAEy*vy <0;
-}
+// bool PedsimMovement::isTheRightE(float vAEx, float vAEy, float vx, float vy){
+//     return vAEx*vx + vAEy*vy <0;
+// }
 void PedsimMovement::updateDangerousZone(float p, float radius, float angle){
     //destroy the old fixtures 
     for(int i = 0; i<12; i++){
