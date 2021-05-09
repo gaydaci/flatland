@@ -81,7 +81,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     updateSafetyDistance();
 
     // check if valid bodies are given
-    if (body_ == nullptr || left_leg_body_ == nullptr || right_leg_body_ == nullptr || safety_dist_b2body_==nullptr) {s
+    if (body_ == nullptr || left_leg_body_ == nullptr || right_leg_body_ == nullptr || safety_dist_b2body_==nullptr) {//s
         throw flatland_server::YAMLException("Body with with the given name does not exist");
     }
 }
@@ -490,7 +490,9 @@ void PedsimMovement::AfterPhysicsStep(const Timekeeper& timekeeper) {
     // publish agent state for every human
     //publish the agent state 
     agent_state_pub_.publish(person);
-    danger_zone_pub_.publish(dangerZone);
+    if(useDangerZone==true){
+        danger_zone_pub_.publish(dangerZone);
+    }    
   }
 }
 };
