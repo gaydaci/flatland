@@ -53,7 +53,7 @@ void RandomWandering::agentCallback(const visualization_msgs::MarkerArray& agent
 void RandomWandering::AfterPhysicsStep(const Timekeeper& timekeeper) {
   bool publish = update_timer_.CheckUpdate(timekeeper);
   if (publish) {
-
+    robo_obstacle.ns= GetModel()->GetNameSpace().c_str();
     //publish the agent state 
     robo_obstacle_pub_.publish(robo_obstacle);
   }
@@ -67,6 +67,7 @@ void RandomWandering::BeforePhysicsStep(const Timekeeper& timekeeper) {
   if (robo_obstacles.markers.size() == 0) {
     return;
   }
+
   currentLinearVelocity = body_->GetLinearVelocity();
   // ROS_INFO("Name of robo obstacle %s ",GetModel()->GetName().c_str());
   robo_obstacle =robo_obstacles.markers[0];
