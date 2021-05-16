@@ -146,7 +146,7 @@ bool ServiceManager::SpawnModels(flatland_msgs::SpawnModels::Request &request,
                       e.what());
     }
   }
-  ROS_WARN("Spawning models in flatland: %f", (ros::WallTime::now() - start).toSec());
+  ROS_DEBUG("Spawning models in flatland: %f", (ros::WallTime::now() - start).toSec());
   return true;
 }
 
