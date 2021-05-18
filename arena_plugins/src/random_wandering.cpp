@@ -40,10 +40,10 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
   obstacleNear = false;
   laserScan = nullptr;
   targetAngularVelocity = 0.0;
-  std::string random_wandrer_topic = ros::this_node::getNamespace() + "randomwanderer/scan";
+  std::string random_wanderer_topic = ros::this_node::getNamespace() + "/randomwanderer/scan" + std::to_string(GetModel()->model_index_);
 
   // subscribe topics
-  laserSub = nh_.subscribe(random_wandrer_topic, 1, &RandomWandering::LaserCallback, this);
+  laserSub = nh_.subscribe(random_wanderer_topic, 1, &RandomWandering::LaserCallback, this);
 }
 
 void RandomWandering::agentCallback(const visualization_msgs::MarkerArray& agents){
@@ -214,7 +214,7 @@ void RandomWandering::ActivateState(WandererState state_in) {
 void RandomWandering::DeactivateState(WandererState state_in) {
   if (state == Forward) {
     // stop moving
-    body->physics_body_->SetLinearVelocity(b2Vec2());
+    body->physics_body_->SetLinearVelocity(b2Vec2(0, 0));
   } else if (state == Turning) {
     // stop turning
     body->physics_body_->SetAngularVelocity(0);

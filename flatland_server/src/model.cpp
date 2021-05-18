@@ -50,6 +50,7 @@
 #include <flatland_server/model.h>
 
 namespace flatland_server {
+int Model::model_index_ = 0;
 
 Model::Model(b2World *physics_world, CollisionFilterRegistry *cfr,
              const std::string &ns, const std::string &name, const std::string &model_yaml_path)
@@ -60,6 +61,7 @@ Model::Model(b2World *physics_world, CollisionFilterRegistry *cfr,
       model_yaml_path_(model_yaml_path)
       {
         model_enabled_ = true;
+        model_index_++;
       }
 
 Model::~Model() {
