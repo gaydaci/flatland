@@ -40,10 +40,10 @@ class PedsimMovement : public ModelPlugin {
    */
   void OnInitialize(const YAML::Node &config) override;
 
-/**
- * @brief For reconfiguring plugin, when model was disabled.
- * Body Footprint of leg(s) will be set.
- */
+  /**
+   * @brief For reconfiguring plugin, when model was disabled.
+   * Body Footprint of leg(s) will be set.
+   */
   void reconfigure() override;
 
 
@@ -53,14 +53,14 @@ class PedsimMovement : public ModelPlugin {
    */
   void BeforePhysicsStep(const Timekeeper &timekeeper) override;
 
-     /**
+  int GetAgent(int agentId, pedsim_msgs::AgentState &agent);
+
+  /**
    * @name          AfterPhysicsStep
    * @brief         override the AfterPhysicsStep method
-   * @param[in]     config The plugin YAML node
+   * @param[in] timekeeper Object managing the simulation time
    */
-
   void AfterPhysicsStep(const Timekeeper& timekeeper) override;
-
 
 
   private: 
@@ -146,10 +146,10 @@ class PedsimMovement : public ModelPlugin {
      */
     void ConfigFootprintDefSafetyDist(b2FixtureDef &fixture_def); 
 
-  /**
-   * @brief update safety distance circle, when the agent is chatting.
-   * Body Footprint of safety dist circle will be set.
-   */
+    /**
+     * @brief update safety distance circle, when the agent is chatting.
+     * Body Footprint of safety dist circle will be set.
+     */
     void updateSafetyDistance();
 
 };

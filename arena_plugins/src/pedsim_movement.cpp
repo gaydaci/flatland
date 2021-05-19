@@ -46,7 +46,6 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     std::string pedsim_agents_topic = ros::this_node::getNamespace() + reader.Get<std::string>("agent_topic");
 
     std::string agent_state_topic = reader.Get<std::string>("agent_state_pub", "agent_state");
-    
     double update_rate = reader.Get<double>("update_rate");
     // update_timer_.SetRate(update_rate);  // timer to update global movement of agent
     
@@ -59,7 +58,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
 
     // Subscribe to ped_sims agent topic to retrieve the agents position
     pedsim_agents_sub_ = nh_.subscribe(pedsim_agents_topic, 1, &PedsimMovement::agentCallback, this);
-    // publish the social state of every pedestrain
+    // publish the socialPedsimMovement.Aft state of every pedestrain
     agent_state_pub_ = nh_.advertise<pedsim_msgs::AgentState>(agent_state_topic, 1);
 
     //Get bodies of pedestrian
@@ -89,9 +88,25 @@ void PedsimMovement::updateSafetyDistance(){
     set_safety_dist_footprint(safety_dist_b2body_, safety_dist_);
 }
 
+int PedsimMovement::GetAgent(int agentId, pedsim_msgs::AgentState &agent) {
+    for (int i = 0; i < agents_->agent_states.size(); i++){
+        pedsim_msgs::AgentState p = agents_->agent_states[i];
+        if (p.id == agentId){
+            agent = p;
+            return 0;
+        }
+
+        if (i == agents_->agent_states.size() - 1)
+        {
+            ROS_WARN("Couldn't find Human agent: %d", agentId);
+        }
+    }
+    return -1;
+}
+
 void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     // check if an update is REQUIRED
-    if (agents_ == NULL) { //!update_timer_.CheckUpdate(timekeeper) || 
+    if (agents_ == NULL) {
         return;
     }
 
@@ -101,7 +116,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
 
     //Find appropriate agent in list
-    for (int i=0; i < (int)agents_->agent_states.size(); i++){
+    for (int i = 0; i < (int) agents_->agent_states.size(); i++){
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
@@ -130,12 +145,13 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
             }
             break;
         }
+
+        if (i == agents_->agent_states.size() - 1) {
+            ROS_WARN("Couldn't find agent: %d", id_);
+            return;
+        }
     };
-    //Check if person was found
-    if (std::isnan(person.twist.linear.x)){
-        ROS_WARN("Couldn't find agent: %d", int(person.id));
-        return;
-    }
+
     //Initialize agent
     if(init_== true){
         // Set initial leg position
@@ -143,9 +159,9 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         init_ = false;
     }
 
-    float vel_x =person.twist.linear.x;; //
-    float vel_y =person.twist.linear.y;; // 
-    float angle_soll = atan2(person.direction.y, person.direction.x);
+    float vel_x = person.twist.linear.x;
+    float vel_y = person.twist.linear.y;
+    float angle_soll = person.direction;
     float angle_ist = body_->GetAngle();
 
     //Set pedsim_agent position in flatland simulator
@@ -314,6 +330,7 @@ void PedsimMovement::AfterPhysicsStep(const Timekeeper& timekeeper) {
     // get the state of the body and publish the data
     // publish agent state for every human
     //publish the agent state 
+    // ROS_WARN("puplishing humnan agent state with %d", int(person.id));
     agent_state_pub_.publish(person);
   }
 }

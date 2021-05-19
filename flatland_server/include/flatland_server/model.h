@@ -74,6 +74,7 @@ class Model : public Entity {
   CollisionFilterRegistry *cfr_;     ///< Collision filter registry
   std::string viz_name_;             ///< used for visualization
   bool model_enabled_;
+  static int model_index_;
 
   /**
    * @brief Constructor for the model

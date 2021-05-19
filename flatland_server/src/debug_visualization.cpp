@@ -255,7 +255,7 @@ void DebugVisualization::Publish(const Timekeeper& timekeeper) {
 
   if (to_delete.size() > 0) {
     for (const auto& topic : to_delete) {
-      ROS_WARN_NAMED("DebugVis", "Deleting topic %s", topic.c_str());
+      ROS_INFO_NAMED("DebugVis", "Deleting topic %s", topic.c_str());
       topics_.erase(topic);
     }
     PublishTopicList();

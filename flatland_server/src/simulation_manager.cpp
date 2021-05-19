@@ -111,9 +111,9 @@ void SimulationManager::Main() {
   ROS_INFO_NAMED("SimMan", "Simulation loop started");
 
   // advertise: step world service server
-  ROS_INFO("reach here++++++++++++++++===%d", (int)train_mode_);
+  ROS_DEBUG("reach here++++++++++++++++===%d", (int)train_mode_);
   if(train_mode_){
-    ros::NodeHandle nh;    
+    ros::NodeHandle nh;
     step_world_service_ = nh.advertiseService("step_world", &SimulationManager::callback_StepWorld, this);
   }
   
