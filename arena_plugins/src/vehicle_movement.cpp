@@ -9,6 +9,9 @@
 #include <flatland_server/yaml_reader.h>
 #include <pluginlib/class_list_macros.h>
 #include<bits/stdc++.h>
+#include <iostream>
+#include <pwd.h>
+#include <string>
 using namespace flatland_server;
 
 namespace flatland_plugins {
@@ -51,6 +54,7 @@ void VehicleMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if (agents_ == NULL) {
         return;
     }
+    YAML::Node config = YAML::LoadFile("/home/bassilifa/catkin_ws/src/arena-rosnav/simulator_setup/saftey_distance_parameter.yaml");
     
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
@@ -64,6 +68,17 @@ void VehicleMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
+            Color c=Color(  0.26, 0.3, 0, 0.3) ;
+
+            if ( config["safety distance factor"][person.social_state].as<float>() > 1.2  ){
+                 c=Color(0.93, 0.16, 0.16, 0.3);
+            }
+            else if(config["safety distance factor"][person.social_state].as<float>() < 0.89){  
+                 c=Color(  0.16, 0.93, 0.16, 0.3) ;
+            }
+       
+            safety_dist_body_->SetColor(c);
+            safety_dist_= config["safety distance factor"][person.social_state].as<float>() * config["human obstacle safety distance radius"][person.type].as<float>()   ;
             updateSafetyDistance();
             break;
         }
@@ -74,8 +89,7 @@ void VehicleMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
             return;
         }
     };
-
-
+ 
     float vel_x = person.twist.linear.x;
     float vel_y = person.twist.linear.y;
     float angle_soll = person.direction;
