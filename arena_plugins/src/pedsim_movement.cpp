@@ -12,6 +12,9 @@
 #include <flatland_server/yaml_reader.h>
 #include <pluginlib/class_list_macros.h>
 #include<bits/stdc++.h>
+#include <iostream>
+#include <pwd.h>
+#include <string>
 using namespace flatland_server;
 
 namespace flatland_plugins {
@@ -104,15 +107,19 @@ int PedsimMovement::GetAgent(int agentId, pedsim_msgs::AgentState &agent) {
     return -1;
 }
 
+
 void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     // check if an update is REQUIRED
     if (agents_ == NULL) {
         return;
     }
+    
+    passwd* pw = getpwuid(getuid());
+    std::string path(pw->pw_dir);
+    YAML::Node config = YAML::LoadFile(path+"/catkin_ws/src/arena-rosnav/simulator_setup/saftey_distance_parameter.yaml");
 
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
-    // ROS_WARN("name space: %s",ns_str.c_str());
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
 
     //Find appropriate agent in list
@@ -120,29 +127,23 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
+
             //change visualization of the human if they are talking 
-            if (person.social_state=="\"talking\""){
-                // ROS_INFO("change color because talking");
-                //r g b a
-                Color c=Color(0.93, 0.16, 0.16, 0.3);
-                safety_dist_body_->SetColor(c);
-                safety_dist_=0.5;
-                updateSafetyDistance();
-            }else if(person.social_state=="\"running\""){
-                ROS_INFO("change color because running");
-                //r g b a
-                Color c=Color(0.56, 0.7, 0, 0.3);
-                safety_dist_body_->SetColor(c);
-                safety_dist_=1.5;
-                updateSafetyDistance();
-            }else if(person.social_state=="\"individual_moving\""){
-                // ROS_INFO("change color because walking");
-                //r g b a
-                Color c=Color(0.26, 0.3, 0, 0.3);//[0.26, 0.3, 0, 0.3]
-                safety_dist_body_->SetColor(c);
-                safety_dist_ = safety_dist_original_;
-                updateSafetyDistance();
+        
+         
+            Color c=Color(  0.26, 0.3, 0, 0.3) ;
+            safety_dist_= config["safety distance factor"][person.social_state].as<float>() * config["human obstacle safety distance radius"][person.type].as<float>()   ;
+           
+            if ( config["safety distance factor"][person.social_state].as<float>() > 1.2  ){
+                 c=Color(0.93, 0.16, 0.16, 0.3);
             }
+            else if(config["safety distance factor"][person.social_state].as<float>() < 0.89){  
+                 c=Color(  0.16, 0.93, 0.16, 0.3) ;
+            }
+
+            safety_dist_body_->SetColor(c);
+            updateSafetyDistance();
+          
             break;
         }
 
@@ -151,7 +152,6 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
             return;
         }
     };
-
     //Initialize agent
     if(init_== true){
         // Set initial leg position
