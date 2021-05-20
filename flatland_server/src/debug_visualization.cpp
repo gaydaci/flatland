@@ -86,6 +86,10 @@ void DebugVisualization::JointToMarkers(
   marker.color.a = a;
   marker.type = marker.LINE_LIST;
   marker.scale.x = 0.01;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
 
   geometry_msgs::Point p_a1, p_a2, p_b1, p_b2;
   p_a1.x = joint->GetAnchorA().x;
