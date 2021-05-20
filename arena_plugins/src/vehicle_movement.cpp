@@ -54,14 +54,15 @@ void VehicleMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if (agents_ == NULL) {
         return;
     }
-    YAML::Node config = YAML::LoadFile("/home/bassilifa/catkin_ws/src/arena-rosnav/simulator_setup/saftey_distance_parameter.yaml");
-    
+      
+    passwd* pw = getpwuid(getuid());
+    std::string path(pw->pw_dir);
+    YAML::Node config = YAML::LoadFile(path+"/catkin_ws/src/arena-rosnav/simulator_setup/saftey_distance_parameter.yaml");
+
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
     // ROS_WARN("name space: %s",ns_str.c_str());
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
-    // ROS_INFO("%s ",ns_str.c_str());
-    // ROS_INFO("%d ",id_);
 
     //Find appropriate agent in list
     for (int i = 0; i < (int) agents_->agent_states.size(); i++){
