@@ -30,6 +30,9 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     r_static = 0.7;
     useDangerZone=true; //TODO: will be the parameter set in yaml file
 
+    // path = ros::package::getPath("simulator_setup");
+    // config_safety_dist= YAML::LoadFile( path+"/saftey_distance_parameter.yaml");
+    // ROS_INFO(" %s/saftey_distance_parameter.yaml",path.c_str());
     // random generator to generate leg_offset, step_length with variance.
     std::random_device r;
     std::default_random_engine generator(r());
@@ -121,9 +124,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     }
     
     // passwd* pw = getpwuid(getuid());
-    std::string path = ros::package::getPath("simulator_setup");
-    YAML::Node config = YAML::LoadFile(path+"/saftey_distance_parameter.yaml");
-    // ROS_INFO(" %s/saftey_distance_parameter.yaml",path.c_str());
+
     // passwd* pw = getpwuid(getuid());
     // std::string path(pw->pw_dir);
     // ROS_INFO("reach here++++++++==");
@@ -153,18 +154,19 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if(useDangerZone==false){
             //change visualization of the human if they are talking         
             Color c=Color(  0.26, 0.3, 0, 0.3) ;
-            // ROS_INFO("cac safe dis");
-            safety_dist_= config["safety distance factor"][person.social_state].as<float>() * config["human obstacle safety distance radius"][person.type].as<float>();
-        //    std::cout<<safety_dist_<<"safety dist++++== ";
-            if ( config["safety distance factor"][person.social_state].as<float>() > 1.2  ){
+            ROS_INFO("cac safe dis");
+            safety_dist_= config_safety_dist["safety distance factor"][person.social_state].as<float>() * config_safety_dist["human obstacle safety distance radius"][person.type].as<float>();
+           std::cout<<safety_dist_<<"safety dist++++== ";
+            if ( config_safety_dist["safety distance factor"][person.social_state].as<float>() > 1.2  ){
                  c=Color(0.93, 0.16, 0.16, 0.3);
             }
-            else if(config["safety distance factor"][person.social_state].as<float>() < 0.89){  
+            else if(config_safety_dist["safety distance factor"][person.social_state].as<float>() < 0.89){  
                  c=Color(  0.16, 0.93, 0.16, 0.3) ;
             }
             safety_dist_body_->SetColor(c);
             updateSafetyDistance();
     }else{
+        ROS_INFO("reach here++++++++==");
         dangerZoneCenter.clear();
         if(vel>0.01){ //this threshold is used for filtering of some rare cases, no influence for performance
             calculateDangerZone(vel);
@@ -192,6 +194,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         dangerZone.dangerZoneRadius=dangerZoneRadius;
         dangerZone.dangerZoneAngle=dangerZoneAngle;
         dangerZone.dangerZoneCenter=dangerZoneCenter;
+        ROS_INFO("reach here++++++++==111");
     }
     //Initialize agent
     if(init_== true){

@@ -116,6 +116,9 @@ class PedsimMovement : public ModelPlugin {
 
     flatland_plugins::TriangleProfile* wp_;
 
+    YAML::Node config_safety_dist;
+    std::string path;
+
     //parameters for calculating danger zone
     float slopeBE1;
     float slopeBE2;
