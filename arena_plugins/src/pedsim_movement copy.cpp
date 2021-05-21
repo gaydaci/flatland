@@ -28,7 +28,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     mv = 1.5;
     av =1.5;
     r_static = 0.7;
-    useDangerZone=true; //TODO: will be the parameter set in yaml file
+    useDangerZone=false; //TODO: will be the parameter set in yaml file
 
     path = ros::package::getPath("simulator_setup");
     config_safety_dist= YAML::LoadFile( path+"/saftey_distance_parameter.yaml");
@@ -122,6 +122,15 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if (agents_ == NULL) {
         return;
     }
+    
+    // passwd* pw = getpwuid(getuid());
+
+    // passwd* pw = getpwuid(getuid());
+    // std::string path(pw->pw_dir);
+    // ROS_INFO("reach here++++++++==");
+    // YAML::Node config = YAML::LoadFile(path+"/catkin_ws1/src/arena-rosnav/simulator_setup/saftey_distance_parameter.yaml");
+    // ROS_INFO(" %s/catkin_ws1/src/arena-rosnav/simulator_setup/saftey_distance_parameter.yaml",path.c_str());
+    // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
 
@@ -145,9 +154,9 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if(useDangerZone==false){
             //change visualization of the human if they are talking         
             Color c=Color(  0.26, 0.3, 0, 0.3) ;
-            // ROS_INFO("cac safe dis");
+            ROS_INFO("cac safe dis");
             safety_dist_= config_safety_dist["safety distance factor"][person.social_state].as<float>() * config_safety_dist["human obstacle safety distance radius"][person.type].as<float>();
-        //    std::cout<<safety_dist_<<"safety dist++++== ";
+           std::cout<<safety_dist_<<"safety dist++++== ";
             if ( config_safety_dist["safety distance factor"][person.social_state].as<float>() > 1.2  ){
                  c=Color(0.93, 0.16, 0.16, 0.3);
             }
@@ -157,7 +166,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
             safety_dist_body_->SetColor(c);
             updateSafetyDistance();
     }else{
-        // ROS_INFO("reach here++++++++==");
+        ROS_INFO("reach here++++++++==");
         dangerZoneCenter.clear();
         if(vel>0.01){ //this threshold is used for filtering of some rare cases, no influence for performance
             calculateDangerZone(vel);
