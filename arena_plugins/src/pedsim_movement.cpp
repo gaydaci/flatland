@@ -24,16 +24,16 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     state_ = LEFT;
     init_ = true;
 
-    human_radius=0.4;
-    mv = 1.5;
-    av =1.5;
-    r_static = 0.7;
-    useDangerZone=true; //TODO: will be the parameter set in yaml file
-
     path = ros::package::getPath("simulator_setup");
     config_safety_dist= YAML::LoadFile( path+"/saftey_distance_parameter.yaml");
-    // ROS_INFO(" %s/saftey_distance_parameter.yaml",path.c_str());
-    // random generator to generate leg_offset, step_length with variance.
+    useDangerZone = config_safety_dist["useDangerZone"]["enable"].as<bool>();
+    // std::cout<<useDangerZone;
+    if(useDangerZone){
+        human_radius=0.4;
+        mv = 1.5;
+        av =1.5;
+        r_static = 0.7;
+    }
     std::random_device r;
     std::default_random_engine generator(r());
 
@@ -63,10 +63,6 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     
     //Walking profile
     wp_ = new flatland_plugins::TriangleProfile(step_time);
-    // get frame name of base body
-    // std::string ns_str = GetModel()->GetNameSpace();
-    // body_frame_ = ns_str;
-    // body_frame_ += "_base";
 
     // Subscribe to ped_sims agent topic to retrieve the agents position
     pedsim_agents_sub_ = nh_.subscribe(pedsim_agents_topic, 1, &PedsimMovement::agentCallback, this);
@@ -145,9 +141,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if(useDangerZone==false){
             //change visualization of the human if they are talking         
             Color c=Color(  0.26, 0.3, 0, 0.3) ;
-            // ROS_INFO("cac safe dis");
             safety_dist_= config_safety_dist["safety distance factor"][person.social_state].as<float>() * config_safety_dist["human obstacle safety distance radius"][person.type].as<float>();
-        //    std::cout<<safety_dist_<<"safety dist++++== ";
             if ( config_safety_dist["safety distance factor"][person.social_state].as<float>() > 1.2  ){
                  c=Color(0.93, 0.16, 0.16, 0.3);
             }
@@ -157,7 +151,6 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
             safety_dist_body_->SetColor(c);
             updateSafetyDistance();
     }else{
-        // ROS_INFO("reach here++++++++==");
         dangerZoneCenter.clear();
         if(vel>0.01){ //this threshold is used for filtering of some rare cases, no influence for performance
             calculateDangerZone(vel);
@@ -185,7 +178,6 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         dangerZone.dangerZoneRadius=dangerZoneRadius;
         dangerZone.dangerZoneAngle=dangerZoneAngle;
         dangerZone.dangerZoneCenter=dangerZoneCenter;
-        // ROS_INFO("reach here++++++++==111");
     }
     //Initialize agent
     if(init_== true){
@@ -230,7 +222,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
                 break;
         }
         //Recorrect leg position according to true person position
-        if(wp_->is_leg_in_center())
+        if(wp_->is_leg_in_center() || vel<=0.01)
             resetLegPosition(person.pose.position.x, person.pose.position.y, angle_soll);
         
     }else{
