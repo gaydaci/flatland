@@ -128,9 +128,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         if (p.id == id_){
             person = p;
 
-            //change visualization of the human if they are talking 
-        
-         
+            //change visualization of the human if they are talking           
             Color c=Color(  0.26, 0.3, 0, 0.3) ;
             safety_dist_= config["safety distance factor"][person.social_state].as<float>() * config["human obstacle safety distance radius"][person.type].as<float>()   ;
            

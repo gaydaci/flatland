@@ -32,8 +32,7 @@ class RandomWandering : public ModelPlugin {
   float targetAngularVelocity;
   float angleGoal;
   ros::Subscriber laserSub;
-  ros::Subscriber robo_obstacle_sub_;        ///< Subscriber to pedsim agents state
-  ros::Publisher robo_obstacle_pub_;          ///< Publisher for agent state of  every pedsim agent
+  ros::Publisher robo_obstacle_pub_;          ///< Publisher for agent state 
     
   visualization_msgs::Marker  robo_obstacle ;
   visualization_msgs::MarkerArray  robo_obstacles  ;
@@ -63,12 +62,6 @@ class RandomWandering : public ModelPlugin {
   * @param[in] timekeeper Object managing the simulation time
   */
   void AfterPhysicsStep(const Timekeeper& timekeeper) override;
-
-  /**
-    * @brief Callback for pedsim agent topic
-    * @param[in] agents array of all agents
-    */
-  void agentCallback(const visualization_msgs::MarkerArray& agents);
 
 
   void set_safety_dist_footprint(b2Body * physics_body_, double radius);

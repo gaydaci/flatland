@@ -3,6 +3,8 @@
 #include <pluginlib/class_list_macros.h>
 #include <ros/console.h>
 #include <random>
+#include <visualization_msgs/Marker.h>
+
 using namespace flatland_server;
 
 namespace flatland_plugins {
@@ -22,11 +24,10 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
   safety_dist_b2body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"))->GetPhysicsBody();
   safety_dist_body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"));
   updateSafetyDistance();
-  std::string robo_obstacle_topic = ros::this_node::getNamespace() + "/flatland_server/debug/model/"+GetModel()->GetName() ;
+
   std::string agent_state_topic = ros::this_node::getNamespace()+ "/"+GetModel()->GetName() ;   
   // Subscribe to ped_sims agent topic to retrieve the agents position
-  robo_obstacle_sub_ = nh_.subscribe(robo_obstacle_topic, 1, &RandomWandering::agentCallback, this);
-  
+
   //ROS_WARN("robo_obstacle_topic  %s, agent_state_topic %s",robo_obstacle_topic.c_str(),agent_state_topic.c_str());
   robo_obstacle_pub_ = nh_.advertise<visualization_msgs::Marker>(agent_state_topic, 1);
 
@@ -46,14 +47,12 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
   laserSub = nh_.subscribe(random_wanderer_topic, 1, &RandomWandering::LaserCallback, this);
 }
 
-void RandomWandering::agentCallback(const visualization_msgs::MarkerArray& agents){
-    robo_obstacles = agents;
-}
 
 void RandomWandering::AfterPhysicsStep(const Timekeeper& timekeeper) {
   bool publish = update_timer_.CheckUpdate(timekeeper);
+
   if (publish) {
-    robo_obstacle.ns= GetModel()->GetNameSpace().c_str();
+    
     //publish the agent state 
     robo_obstacle_pub_.publish(robo_obstacle);
   }
@@ -68,20 +67,26 @@ void RandomWandering::BeforePhysicsStep(const Timekeeper& timekeeper) {
     return;
   }
 
-  currentLinearVelocity = body_->GetLinearVelocity();
-  // ROS_INFO("Name of robo obstacle %s ",GetModel()->GetName().c_str());
-  robo_obstacle =robo_obstacles.markers[0];
+  robo_obstacle.header.frame_id = "base_link";
+  robo_obstacle.header.stamp = ros::Time::now();
+  robo_obstacle.ns= GetModel()->GetNameSpace().c_str();
+  robo_obstacle.id = 1;
+  robo_obstacle.action = visualization_msgs::Marker::ADD;
+  robo_obstacle.pose.position.x =  body_->GetPosition().x;
+  robo_obstacle.pose.position.y = body_->GetPosition().y;
+  robo_obstacle.scale.x = body_->GetLinearVelocity().x;
+  robo_obstacle.scale.y = body_->GetLinearVelocity().y;
   DoStateTransition();
-  robo_obstacle.points[0].x = currentLinearVelocity.x;
-  robo_obstacle.points[0].y = currentLinearVelocity.y;
+
+
   Color c=Color(0.93, 0.16, 0.16, 0.3);
   safety_dist_body_->SetColor(c);
   updateSafetyDistance();
   float angle_soll = atan2(body_->GetLinearVelocity().x, body_->GetLinearVelocity().x);
+
   // body_->SetTransform(body_->GetPosition(), angle_soll);
   safety_dist_b2body_->SetTransform(body_->GetPosition(), angle_soll);
   // //Set pedsim_agent velocity in flatland simulator to approach next position
-  // body_->SetLinearVelocity(body_->GetLinearVelocity());
   safety_dist_b2body_->SetLinearVelocity(body_->GetLinearVelocity());
   
 
