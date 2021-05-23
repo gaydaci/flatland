@@ -27,7 +27,6 @@ class RandomWandering : public ModelPlugin {
   WandererState state;
   Body* body;
   float configuredLinearVelocity;
-  b2Vec2 currentLinearVelocity;
   float configuredAngularVelocity;
   float targetAngularVelocity;
   float angleGoal;
@@ -35,7 +34,6 @@ class RandomWandering : public ModelPlugin {
   ros::Publisher robo_obstacle_pub_;          ///< Publisher for agent state 
     
   visualization_msgs::Marker  robo_obstacle ;
-  visualization_msgs::MarkerArray  robo_obstacles  ;
   sensor_msgs::LaserScanConstPtr laserScan;
   bool obstacleNear;
   b2Body * body_;                            ///< Pointer to base-body

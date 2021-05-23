@@ -26,15 +26,13 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
   updateSafetyDistance();
 
   std::string agent_state_topic = ros::this_node::getNamespace()+ "/"+GetModel()->GetName() ;   
-  // Subscribe to ped_sims agent topic to retrieve the agents position
-
-  //ROS_WARN("robo_obstacle_topic  %s, agent_state_topic %s",robo_obstacle_topic.c_str(),agent_state_topic.c_str());
   robo_obstacle_pub_ = nh_.advertise<visualization_msgs::Marker>(agent_state_topic, 1);
 
 
   if (body_ == nullptr) {
     throw YAMLException("Body with the name" + Q(body_name) + "does not exits");
   }
+  // ROS_WARN("35");
 
   // set initial values
   state = None;
@@ -50,7 +48,8 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
 
 void RandomWandering::AfterPhysicsStep(const Timekeeper& timekeeper) {
   bool publish = update_timer_.CheckUpdate(timekeeper);
-
+  // ROS_WARN("51");
+ 
   if (publish) {
     
     //publish the agent state 
@@ -63,10 +62,8 @@ void RandomWandering::updateSafetyDistance(){
     set_safety_dist_footprint(safety_dist_b2body_, safety_dist_);
 }
 void RandomWandering::BeforePhysicsStep(const Timekeeper& timekeeper) {
-  if (robo_obstacles.markers.size() == 0) {
-    return;
-  }
 
+  // ROS_WARN("64");
   robo_obstacle.header.frame_id = "base_link";
   robo_obstacle.header.stamp = ros::Time::now();
   robo_obstacle.ns= GetModel()->GetNameSpace().c_str();
@@ -77,6 +74,7 @@ void RandomWandering::BeforePhysicsStep(const Timekeeper& timekeeper) {
   robo_obstacle.scale.x = body_->GetLinearVelocity().x;
   robo_obstacle.scale.y = body_->GetLinearVelocity().y;
   DoStateTransition();
+  // ROS_WARN("75");
 
 
   Color c=Color(0.93, 0.16, 0.16, 0.3);
