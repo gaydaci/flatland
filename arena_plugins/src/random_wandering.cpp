@@ -24,6 +24,15 @@ void RandomWandering::OnInitialize(const YAML::Node& config) {
   safety_dist_b2body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"))->GetPhysicsBody();
   safety_dist_body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"));
   updateSafetyDistance();
+  std::string path = ros::package::getPath("simulator_setup");
+  YAML::Node config1 = YAML::LoadFile(path+"/advanced_configs.yaml");
+  human_radius=0.4;
+  mv = 1.5;
+  av =1.5;
+  r_static = 0.7;
+  useDangerZone=false;
+  if (config1["use danger zone"].as<float>()== 1.0) 
+  {useDangerZone=true;}
 
   std::string agent_state_topic = ros::this_node::getNamespace()+ "/"+GetModel()->GetName() ;   
   robo_obstacle_pub_ = nh_.advertise<visualization_msgs::Marker>(agent_state_topic, 1);
@@ -76,10 +85,46 @@ void RandomWandering::BeforePhysicsStep(const Timekeeper& timekeeper) {
   DoStateTransition();
   // ROS_WARN("75");
 
+      //modeling of safety distance
+  vel_x = robo_obstacle.scale.x ; //
+  vel_y = robo_obstacle.scale.y;   // 
+  vel = sqrt(vel_x*vel_x+vel_y*vel_y);
 
   Color c=Color(0.93, 0.16, 0.16, 0.3);
-  safety_dist_body_->SetColor(c);
-  updateSafetyDistance();
+  if(useDangerZone==false){
+          //change visualization of the human if they are talking         
+    
+          safety_dist_body_->SetColor(c);
+          updateSafetyDistance();
+  }else{
+      dangerZoneCenter.clear();
+      if(vel>0.01){ //this threshold is used for filtering of some rare cases, no influence for performance
+          calculateDangerZone(vel);
+          velocityAngles.clear();
+          double velocityAngle=atan(vel_y/vel_x);
+          velocityAngles.push_back(velocityAngle);
+          velocityAngles.push_back(velocityAngle+M_PI);
+          for(int i=0; i<2; i++){
+              double x=pL[0]*cos(velocityAngles[i]);
+              double y=pL[0]*sin(velocityAngles[i]);
+              if(x*vel_x+y*vel_y<0){
+                  dangerZoneCenter.push_back(robo_obstacle.pose.position.x+x);
+                  dangerZoneCenter.push_back(robo_obstacle.pose.position.y+y);
+                  break;
+              }
+          }
+      }else{// if vel <0.01, it is treated as stopped
+          dangerZoneRadius=safety_dist_original_;
+          dangerZoneAngle=2*M_PI;        
+          dangerZoneCenter.push_back(robo_obstacle.pose.position.x);
+          dangerZoneCenter.push_back(robo_obstacle.pose.position.y);
+      }
+      //
+      dangerZone.header=robo_obstacle.header;
+      dangerZone.dangerZoneRadius=dangerZoneRadius;
+      dangerZone.dangerZoneAngle=dangerZoneAngle;
+      dangerZone.dangerZoneCenter=dangerZoneCenter;
+  }
   float angle_soll = atan2(body_->GetLinearVelocity().x, body_->GetLinearVelocity().x);
 
   // body_->SetTransform(body_->GetPosition(), angle_soll);
@@ -252,6 +297,148 @@ float RandomWandering::RandomRange(const float range_lo, const float range_hi) {
 
   uniform_real_distribution<float> nd(range_lo, range_hi);
   return nd(e1);
+}
+
+
+void RandomWandering::calculateDangerZone(float vel_agent){
+    interceptBE.clear();
+    slopeBE.clear();
+    pL.clear();
+    dangerZoneRadius = mv*vel_agent + r_static;
+    dangerZoneAngle = 11*M_PI / 6* exp(-1.4*av*vel_agent) +  M_PI/6;
+    pB_1 = dangerZoneRadius*cos(dangerZoneAngle/2);
+    pB_2 = dangerZoneRadius*sin(dangerZoneAngle/2);
+    // pC_1 = dangerZoneRadius*cos(- dangerZoneAngle/2);
+    // pC_2= dangerZoneRadius*sin(- dangerZoneAngle/2;
+    // float diffY=-pB[1];
+    // float diffX=-pB[0];
+    a = human_radius*human_radius - pB_1*pB_1;
+    b = 2*pB_1*pB_2;
+    c_ = human_radius*human_radius - pB_2*pB_2;
+    h = b*b - 4*a*c_;
+    if(h<0){
+        ROS_INFO("no valid root for m+++++h=[%f]",h);
+    }else{
+        slopeBE1 = (-b+sqrt(h))/(2*a);
+        slopeBE2 = (-b-sqrt(h))/(2*a);
+    }
+    interceptBE1 = pB_2 - slopeBE1*pB_1;
+    interceptBE2 = pB_2 - slopeBE2*pB_1;
+    interceptBE.push_back(interceptBE1);
+    interceptBE.push_back(interceptBE2);
+    slopeBE.push_back(slopeBE1);
+    slopeBE.push_back(slopeBE2);
+    for(int i= 0; i< 2; i++)
+    {    
+        float x = (- interceptBE[i])/(slopeBE[i]);
+        float y = slopeBE[i]*x + interceptBE[i];
+        float vAEx=x;
+        float vAEy=y;
+        if(vAEx*vel_agent<0){
+            pL.push_back(x);
+            pL.push_back(y);
+            break;
+        }
+    }
+    float vLBx=pL[0]-pB_1;
+    float vLBy=pL[1]-pB_2;
+    float vLAx=pL[0];
+    float vLAy=pL[1];
+    float dotProductLBLA =vLBx*vLAx+vLBy*vLAy;
+    float normLB = sqrt(vLBx*vLBx+vLBy*vLBy);
+    float normLA = sqrt(vLAx*vLAx+vLAy*vLAy);
+    if (dangerZoneAngle < M_PI){
+        float c1 = dotProductLBLA/(normLB*normLA);
+        //clamp(-1,1)
+        float c=c1>1 ? 1 : c1;
+        c=c1<-1? -1 :c1;
+        float angle = acos(c);
+        dangerZoneAngle = 2*angle;
+    }
+    // ROS_INFO("safty model pE0[%f]dangerZoneRadius[%f]dangerZoneAngle[%f]", pL[0], dangerZoneRadius, dangerZoneAngle);
+    updateDangerousZone(pL[0], dangerZoneRadius, dangerZoneAngle);
+}
+
+// bool PedsimMovement::isTheRightE(float vAEx, float vAEy, float vx, float vy){
+//     return vAEx*vx + vAEy*vy <0;
+// }
+void RandomWandering::updateDangerousZone(float p, float radius, float angle){
+    //destroy the old fixtures 
+    for(int i = 0; i<12; i++){
+        b2Fixture* old_fix = safety_dist_b2body_->GetFixtureList();
+        if(old_fix==nullptr){break;}
+        safety_dist_b2body_->DestroyFixture(old_fix);
+    }
+    // create new feature
+    b2FixtureDef fixture_def;
+    // configure physics properties
+    fixture_def.density = 1.0;
+    fixture_def.friction = 0.0;
+    fixture_def.restitution = 0.0;
+    // config collision properties
+    fixture_def.isSensor = true;
+    fixture_def.filter.groupIndex = 0;
+    // Defines that body is just seen in layer "2D" and "ped"
+    fixture_def.filter.categoryBits = 0x000a;
+    bool collision = false;
+    Color c=Color(0.93, 0.16, 0.16, 0.3);
+    if (collision) {
+        // b2d docs: maskBits are "I collide with" bitmask
+        fixture_def.filter.maskBits = fixture_def.filter.categoryBits;
+    } else {
+        // "I will collide with nothing"
+        fixture_def.filter.maskBits = 0;
+    }
+    float delta = angle/10;
+    float last_angle = -angle/2;
+    float next_angle;
+    float v1 = radius*cos(last_angle);
+    float v2 = radius*sin(last_angle);
+    b2PolygonShape shape;
+    b2Vec2 verts[3];
+    for(int i = 0; i<10; i++){
+        next_angle= -angle/2 + (i+1)*delta;
+        verts[0].Set(0.0, 0.0);
+        verts[1].Set(v1, v2);
+        v1= radius*cos(next_angle);
+        v2= radius*sin(next_angle);
+        verts[2].Set(v1, v2);
+        shape.Set(verts, 3);
+        fixture_def.shape = &shape;
+        safety_dist_b2body_->CreateFixture(&fixture_def);
+    }    
+    if(p==0.0){
+        verts[0].Set(0.0, 0.0);
+        v1= radius*cos(-angle/2);
+        v2= radius*sin(-angle/2);
+        verts[1].Set(v1, v2);
+        v1= radius*cos(angle/2);
+        v2= radius*sin(angle/2);
+        verts[2].Set(v1, v2);
+        shape.Set(verts, 3);
+        fixture_def.shape = &shape;
+        safety_dist_b2body_->CreateFixture(&fixture_def);
+    }else{
+        //first vertex
+        verts[0].Set(0.0, 0.0);
+        verts[1].Set(p, 0.0);
+        v1= radius*cos(angle/2);
+        v2= radius*sin(angle/2);
+        verts[2].Set(v1, v2);
+        shape.Set(verts, 3);
+        fixture_def.shape = &shape;
+        safety_dist_b2body_->CreateFixture(&fixture_def);
+        //second vertex
+        verts[0].Set(0.0, 0.0);
+        verts[1].Set(p, 0.0);
+        v1= radius*cos(-angle/2);
+        v2= radius*sin(-angle/2);
+        verts[2].Set(v1, v2);
+        shape.Set(verts, 3);
+        fixture_def.shape = &shape;
+        safety_dist_b2body_->CreateFixture(&fixture_def);
+    }
+    safety_dist_body_->SetColor(c);
 }
 
 

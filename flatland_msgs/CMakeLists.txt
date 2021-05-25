@@ -25,6 +25,7 @@ add_message_files(FILES
   Collisions.msg
   Vector2.msg
   Model.msg
+  DangerZone.msg
 )
 
 add_service_files(FILES

@@ -9,7 +9,8 @@
 #include <nav_msgs/Odometry.h>
 #include <std_msgs/Bool.h>
 #include <sensor_msgs/LaserScan.h>
-
+#include <flatland_msgs/DangerZone.h>
+#include <ros/package.h>
 
 #ifndef ARENA_PLUGINS_RANDOM_WANDERING_H
 #define ARENA_PLUGINS_RANDOM_WANDERING_H
@@ -41,6 +42,41 @@ class RandomWandering : public ModelPlugin {
 
   b2Body * safety_dist_b2body_;               ///< Pointer to safety distance circle
   Body * safety_dist_body_;     
+
+    bool useDangerZone;
+    float vel_x;
+    float vel_y;
+    float vel;
+    float human_radius;
+    float dangerZoneRadius;
+    float dangerZoneAngle;                                    //dangerZoneAngle
+    std::vector<float> pL;                                         //dangerZoneCenter in the agent frame             
+    std::vector<double> dangerZoneCenter; //dangerZoneCenter in absolute frame  
+    ros::Publisher danger_zone_pub_; 
+    flatland_msgs::DangerZone dangerZone;
+    
+
+    //parameters for calculating danger zone
+    float slopeBE1;
+    float slopeBE2;
+    float mv;
+    float av;
+    float r_static;
+    // std::vector<float> pA
+    float pB_1;
+    float pB_2;
+    // std::vector<float> pC;
+    float a;
+    float b; 
+    float c_; 
+    float h;
+    float interceptBE1;
+    float interceptBE2;
+    std::vector<float> interceptBE;
+    std::vector<float> slopeBE;
+    std::vector<double> velocityAngles;
+
+   
 
   double safety_dist_;
   double safety_dist_original_;
@@ -74,6 +110,16 @@ class RandomWandering : public ModelPlugin {
   */
   void updateSafetyDistance();
 
+      /**
+  * @brief visualize the dangerous zone according to the velocities of human.
+  * Body Footprints of dangrous zones will be set.
+  */
+  void updateDangerousZone(float p, float radius, float angle);
+
+  /**
+   * @brief calculate the dangerous zone
+   * */
+    void calculateDangerZone(float vel);
 
 };
 

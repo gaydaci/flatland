@@ -14,10 +14,11 @@
 #include <pedsim_msgs/AgentStates.h>
 #include <pedsim_msgs/AgentState.h>
 #include <ros/ros.h>
+#include <flatland_msgs/DangerZone.h>
 #include <tf/transform_listener.h>
 #include <arena_plugins/triangle_profile.h>
-#include <cmath> 
-
+#include<cmath> 
+#include <ros/package.h>
 
 #ifndef FLATLAND_PLUGINS_VEHICLE_MOVEMENT_H
 #define FLATLAND_PLUGINS_VEHICLE_MOVEMENT_H
@@ -68,6 +69,43 @@ class VehicleMovement : public ModelPlugin {
     double safety_dist_;
     double safety_dist_original_;
     std::string body_frame_;                   ///< frame name of base-body
+    
+    bool useDangerZone;
+    float vel_x;
+    float vel_y;
+    float vel;
+    float human_radius;
+    float dangerZoneRadius;
+    float dangerZoneAngle;                                    //dangerZoneAngle
+    std::vector<float> pL;                                         //dangerZoneCenter in the agent frame             
+    std::vector<double> dangerZoneCenter; //dangerZoneCenter in absolute frame  
+    ros::Publisher danger_zone_pub_; 
+    flatland_msgs::DangerZone dangerZone;
+    
+    flatland_plugins::TriangleProfile* wp_;
+    Color c;
+
+
+    //parameters for calculating danger zone
+    float slopeBE1;
+    float slopeBE2;
+    float mv;
+    float av;
+    float r_static;
+    // std::vector<float> pA
+    float pB_1;
+    float pB_2;
+    // std::vector<float> pC;
+    float a;
+    float b; 
+    float c_; 
+    float h;
+    float interceptBE1;
+    float interceptBE2;
+    std::vector<float> interceptBE;
+    std::vector<float> slopeBE;
+    std::vector<double> velocityAngles;
+
    
     /**
      * @brief Callback for pedsim agent topic
@@ -91,6 +129,17 @@ class VehicleMovement : public ModelPlugin {
      * Body Footprint of safety dist circle will be set.
      */
     void updateSafetyDistance();
+
+        /**
+   * @brief visualize the dangerous zone according to the velocities of human.
+   * Body Footprints of dangrous zones will be set.
+   */
+    void updateDangerousZone(float p, float radius, float angle);
+
+  /**
+   * @brief calculate the dangerous zone
+   * */
+    void calculateDangerZone(float vel);
     
 };
 };
