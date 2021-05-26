@@ -25,6 +25,7 @@ add_message_files(FILES
   Collisions.msg
   Vector2.msg
   Model.msg
+  NamedPose.msg
   DangerZone.msg
 )
 
@@ -34,6 +35,7 @@ add_service_files(FILES
   RespawnModels.srv
   DeleteModel.srv
   DeleteModels.srv
+  MoveModels.srv
   MoveModel.srv
   StepWorld.srv
   Step.srv

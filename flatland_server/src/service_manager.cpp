@@ -67,6 +67,8 @@ ServiceManager::ServiceManager(SimulationManager *sim_man, World *world)
       nh.advertiseService("delete_model", &ServiceManager::DeleteModel, this);
   delete_models_service_ =
     nh.advertiseService("delete_models", &ServiceManager::DeleteModels, this);
+  move_models_service_ =
+      nh.advertiseService("move_models", &ServiceManager::MoveModels, this);
   move_model_service_ =
       nh.advertiseService("move_model", &ServiceManager::MoveModel, this);
   pause_service_ = nh.advertiseService("pause", &ServiceManager::Pause, this);
@@ -214,6 +216,7 @@ bool ServiceManager::RespawnModels(flatland_msgs::RespawnModels::Request &reques
       }
     }else{
       //Simply move existing model
+      // ROS_WARN("Simply move existing model");
       try {
         existing_model->SetNameSpace(model.ns);
         world_->MoveModel(existing_model->GetName(), pose);
@@ -272,6 +275,24 @@ bool ServiceManager::DeleteModels(
       response.message = std::string(e.what());
     }
   }
+  return true;
+}
+
+bool ServiceManager::MoveModels(flatland_msgs::MoveModels::Request &request,
+                               flatland_msgs::MoveModels::Response &response) {
+  for (auto model : request.models) {
+    Pose pose(model.pose.x, model.pose.y, model.pose.theta);
+
+    try {
+      world_->MoveModel(model.name, pose);
+      response.success = true;
+      response.message = "";
+    } catch (const std::exception &e) {
+      response.success = false;
+      response.message = std::string(e.what());
+    }
+  }
+
   return true;
 }
 

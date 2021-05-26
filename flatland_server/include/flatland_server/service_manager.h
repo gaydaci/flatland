@@ -48,6 +48,7 @@
 #include <flatland_msgs/DeleteModel.h>
 #include <flatland_msgs/DeleteModels.h>
 #include <flatland_msgs/MoveModel.h>
+#include <flatland_msgs/MoveModels.h>
 #include <flatland_msgs/SpawnModel.h>
 #include <flatland_msgs/SpawnModels.h>
 #include <flatland_msgs/RespawnModels.h>
@@ -79,6 +80,7 @@ class ServiceManager {
   ros::ServiceServer respawn_models_service_;   ///< service for spawning models
   ros::ServiceServer delete_model_service_;  ///< service for deleting models
   ros::ServiceServer delete_models_service_;  ///< service for deleting models
+  ros::ServiceServer move_models_service_;    ///< service for moving models
   ros::ServiceServer move_model_service_;    ///< service for moving models
   ros::ServiceServer pause_service_;   ///< service for pausing the simulation
   ros::ServiceServer resume_service_;  ///< service for resuming the simulation
@@ -143,6 +145,14 @@ class ServiceManager {
    */
   bool DeleteModels(flatland_msgs::DeleteModels::Request &request,
                    flatland_msgs::DeleteModels::Response &response);
+
+  /**
+   * @brief Callback for the move models service
+   * @param[in] request Contains the request data for the service
+   * @param[in/out] response Contains the response for the service
+   */
+  bool MoveModels(flatland_msgs::MoveModels::Request &request,
+                 flatland_msgs::MoveModels::Response &response);
 
   /**
    * @brief Callback for the move model service

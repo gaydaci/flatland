@@ -1,0 +1,4 @@
+flatland_msgs/NamedPose[] models
+---
+bool success
+string message
