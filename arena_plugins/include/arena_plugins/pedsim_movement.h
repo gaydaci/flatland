@@ -79,6 +79,8 @@ class PedsimMovement : public ModelPlugin {
     b2Body * right_leg_body_;               ///< Pointer to right_leg-body
     b2Body * safety_dist_b2body_;               ///< Pointer to safety distance circle
     Body * safety_dist_body_;               ///< Pointer to safety distance circle
+    b2Body * safety_dist_b2body_danger_zone;               ///< Pointer to safety distance circle
+    Body * safety_dist_body_danger_zone;    
 
     ModelBody * left_leg_body_test_;        ///< Pointer to left_leg-body
     ModelBody * right_leg_body_test_;       ///< Pointer to right_leg-body

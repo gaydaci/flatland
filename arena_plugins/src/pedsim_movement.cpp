@@ -80,7 +80,9 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     right_leg_body_ = GetModel()->GetBody(reader.Get<std::string>("right_leg_body"))->GetPhysicsBody();
     safety_dist_b2body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"))->GetPhysicsBody();
     safety_dist_body_ = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"));
-    
+    safety_dist_b2body_danger_zone = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"))->GetPhysicsBody();
+    safety_dist_body_danger_zone = GetModel()->GetBody(reader.Get<std::string>("safety_dist_body"));
+      
     // Set leg radius
     set_circular_footprint(left_leg_body_, leg_radius_);
     set_circular_footprint(right_leg_body_, leg_radius_);
@@ -189,6 +191,8 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         dangerZone.dangerZoneRadius=dangerZoneRadius;
         dangerZone.dangerZoneAngle=dangerZoneAngle;
         dangerZone.dangerZoneCenter=dangerZoneCenter;
+        safety_dist_body_->SetColor(c);
+        updateSafetyDistance();
     }
     //Initialize agent
     if(init_== true){
@@ -205,11 +209,11 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     //Set pedsim_agent position in flatland simulator
     body_->SetTransform(b2Vec2(person.pose.position.x, person.pose.position.y), angle_soll);
     safety_dist_b2body_->SetTransform(b2Vec2(person.pose.position.x, person.pose.position.y), angle_soll);
-    
+    safety_dist_b2body_danger_zone->SetTransform(b2Vec2(person.pose.position.x, person.pose.position.y), angle_soll);
     //Set pedsim_agent velocity in flatland simulator to approach next position
     body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
     safety_dist_b2body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
-    
+    safety_dist_b2body_danger_zone->SetLinearVelocity(b2Vec2(vel_x, vel_y));
 
     float vel=sqrt(vel_x*vel_x+vel_y*vel_y);
     
@@ -427,9 +431,9 @@ void PedsimMovement::calculateDangerZone(float vel_agent){
 void PedsimMovement::updateDangerousZone(float p, float radius, float angle){
     //destroy the old fixtures 
     for(int i = 0; i<12; i++){
-        b2Fixture* old_fix = safety_dist_b2body_->GetFixtureList();
+        b2Fixture* old_fix = safety_dist_b2body_danger_zone->GetFixtureList();
         if(old_fix==nullptr){break;}
-        safety_dist_b2body_->DestroyFixture(old_fix);
+        safety_dist_b2body_danger_zone->DestroyFixture(old_fix);
     }
     // create new feature
     b2FixtureDef fixture_def;
@@ -466,7 +470,7 @@ void PedsimMovement::updateDangerousZone(float p, float radius, float angle){
         verts[2].Set(v1, v2);
         shape.Set(verts, 3);
         fixture_def.shape = &shape;
-        safety_dist_b2body_->CreateFixture(&fixture_def);
+        safety_dist_b2body_danger_zone->CreateFixture(&fixture_def);
     }    
     if(p==0.0){
         verts[0].Set(0.0, 0.0);
@@ -478,7 +482,7 @@ void PedsimMovement::updateDangerousZone(float p, float radius, float angle){
         verts[2].Set(v1, v2);
         shape.Set(verts, 3);
         fixture_def.shape = &shape;
-        safety_dist_b2body_->CreateFixture(&fixture_def);
+        safety_dist_b2body_danger_zone->CreateFixture(&fixture_def);
     }else{
         //first vertex
         verts[0].Set(0.0, 0.0);
@@ -488,7 +492,7 @@ void PedsimMovement::updateDangerousZone(float p, float radius, float angle){
         verts[2].Set(v1, v2);
         shape.Set(verts, 3);
         fixture_def.shape = &shape;
-        safety_dist_b2body_->CreateFixture(&fixture_def);
+        safety_dist_b2body_danger_zone->CreateFixture(&fixture_def);
         //second vertex
         verts[0].Set(0.0, 0.0);
         verts[1].Set(p, 0.0);
@@ -497,9 +501,9 @@ void PedsimMovement::updateDangerousZone(float p, float radius, float angle){
         verts[2].Set(v1, v2);
         shape.Set(verts, 3);
         fixture_def.shape = &shape;
-        safety_dist_b2body_->CreateFixture(&fixture_def);
+        safety_dist_b2body_danger_zone->CreateFixture(&fixture_def);
     }
-    safety_dist_body_->SetColor(c);
+    safety_dist_body_danger_zone->SetColor(c);
 }
 
 void PedsimMovement::AfterPhysicsStep(const Timekeeper& timekeeper) {
