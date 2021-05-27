@@ -234,7 +234,7 @@ bool ServiceManager::RespawnModels(flatland_msgs::RespawnModels::Request &reques
       // if (old_model == NULL)
       //   continue;
       old_model->DisableModel();
-      ROS_WARN("Servicemanger delete old model (%d) ",(int)i_old_model);
+      // ROS_INFO("Servicemanger delete old model (%d) ",(int)i_old_model);
   }
   return true;
 }
