@@ -166,7 +166,7 @@ bool ServiceManager::RespawnModels(flatland_msgs::RespawnModels::Request &reques
     flatland_msgs::Model model = request.new_models[i_new_model];
     Model* existing_model = NULL;
     for(int i_old_model=0; i_old_model < request.old_model_names.size(); i_old_model++){
-      // ROS_INFO("Servicemanger old model list (%s) ",request.old_model_names[i_old_model].c_str());
+      ROS_INFO("Servicemanger old model list (%s) ",request.old_model_names[i_old_model].c_str());
     }
     for(int i_old_model=0; i_old_model < request.old_model_names.size(); i_old_model++){
       Model* old_model = world_->GetModel(request.old_model_names[i_old_model]);

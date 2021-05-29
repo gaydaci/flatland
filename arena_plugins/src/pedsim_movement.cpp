@@ -24,7 +24,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     mv = 1.5;
     av =1.5;
     r_static = 0.7;
-    useDangerZone=false; //TODO: will be the parameter set in launch file
+    useDangerZone=true;  //TODO: will be the parameter set in yaml file
     // random generator to generate leg_offset, step_length with variance.
     std::random_device r;
     std::default_random_engine generator(r());
@@ -107,6 +107,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
 
     //Find appropriate agent in list
     for (int i=0; i < (int)agents_->agent_states.size(); i++){
+        // ROS_INFO("dddd%d",i);
         pedsim_msgs::AgentState p = agents_->agent_states[i];
         if (p.id == id_){
             person = p;
@@ -213,7 +214,7 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
                 break;
         }
         //Recorrect leg position according to true person position
-        if(wp_->is_leg_in_center())
+        if(wp_->is_leg_in_center()||vel<0.01)
             resetLegPosition(person.pose.position.x, person.pose.position.y, angle_soll);
         
     }else{

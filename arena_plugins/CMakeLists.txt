@@ -82,6 +82,7 @@ add_library(arena_plugins_lib
   src/random_move.cpp
   src/tween2.cpp
   src/pedsim_movement.cpp
+  src/polygon_placement.cpp
   src/triangle_profile.cpp
   src/pose_pub.cpp
 )

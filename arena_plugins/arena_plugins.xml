@@ -11,4 +11,7 @@
     <class type="flatland_plugins::PosePub" base_class_type="flatland_server::ModelPlugin">
     <description>publish the pose of dynamic agents</description>
   </class>
+  <class type="flatland_plugins::PolygonPlacement" base_class_type="flatland_server::ModelPlugin">
+    <description> Polygons from pedsim_ros are connected to bodies in flatland.</description>
+  </class>
 </library>
