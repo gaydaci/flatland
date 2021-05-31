@@ -53,6 +53,8 @@ void VehicleMovement::OnInitialize(const YAML::Node &config){
     if (body_ == nullptr) {
         throw flatland_server::YAMLException("Body with with the given name does not exist");
     }
+
+    safety_dist_body_alpha = reader.Get<float>("safety_dist_body_alpha", 0.3);
 }
 
 void VehicleMovement::updateSafetyDistance(){
@@ -91,12 +93,12 @@ void VehicleMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     //change visualization of the human if they are talking
     safety_dist_= config["safety distance factor"][person.social_state].as<float>() * config["human obstacle safety distance radius"][person.type].as<float>();
 
-    c=Color(  0.26, 0.3, 0, 0.3) ;
+    c=Color(  0.26, 0.3, 0, safety_dist_body_alpha) ;
     if ( config["safety distance factor"][person.social_state].as<float>() > 1.2  ){
-            c=Color(0.93, 0.16, 0.16, 0.3);
+            c=Color(0.93, 0.16, 0.16, safety_dist_body_alpha);
     }
     else if(config["safety distance factor"][person.social_state].as<float>() < 0.89){  
-            c=Color(  0.16, 0.93, 0.16, 0.3) ;
+            c=Color(  0.16, 0.93, 0.16, safety_dist_body_alpha) ;
     }
     if(useDangerZone==false){
             //change visualization of the human if they are talking         
