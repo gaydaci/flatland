@@ -34,7 +34,7 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     if (config1["use danger zone"].as<float>()== 1.0) 
     {useDangerZone=true;}
 
-    safety_dist_config = YAML::LoadFile(ros::package::getPath("simulator_setup") + "/saftey_distance_parameter.yaml");
+    safety_dist_config = YAML::LoadFile(ros::package::getPath("simulator_setup") + "/saftey_distance_parameter_none.yaml");
 
     // random generator to generate leg_offset, step_length with variance.
     std::random_device r;

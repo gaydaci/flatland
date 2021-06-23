@@ -68,7 +68,7 @@ void VehicleMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
       
     
     std::string path = ros::package::getPath("simulator_setup");
-    YAML::Node config = YAML::LoadFile(path+"/saftey_distance_parameter.yaml");
+    YAML::Node config = YAML::LoadFile(path+"/saftey_distance_parameter_none.yaml");
     // get agents ID via namespace
     std::string ns_str = GetModel()->GetNameSpace();
     int id_ = std::stoi(ns_str.substr(13, ns_str.length()));
