@@ -141,6 +141,10 @@ class PedsimMovement : public ModelPlugin {
     std::vector<float> slopeBE;
     std::vector<double> velocityAngles;
 
+    float legs_max_speed;
+
+    float getValueInRange(float value_in, float value_max, float value_min);
+
     /**
      * @brief Callback for pedsim agent topic
      * @param[in] agents array of all agents

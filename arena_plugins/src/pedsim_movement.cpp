@@ -96,6 +96,8 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     }
 
     safety_dist_body_alpha = reader.Get<float>("safety_dist_body_alpha", 0.3);
+
+    legs_max_speed = 1.8;
 }
 
 void PedsimMovement::reconfigure(){
@@ -247,13 +249,30 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
     }
 }
 
+float PedsimMovement::getValueInRange(float value_in, float value_max, float value_min) {
+    if (value_in < value_min) {
+        return value_min;
+    } else if (value_in > value_max) {
+        return value_max;
+    }
+    return value_in;
+}
+
 void PedsimMovement::moveLeftLeg(float32 vel_x, float32 vel_y, float32 angle_diff){
-    left_leg_body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
+    double max_vel = 1.8;
+    double min_vel = -1.8;
+    double v_x = getValueInRange(vel_x, legs_max_speed, -legs_max_speed);
+    double v_y = getValueInRange(vel_y, legs_max_speed, -legs_max_speed);
+    left_leg_body_->SetLinearVelocity(b2Vec2(v_x, v_y));
     left_leg_body_->SetAngularVelocity(angle_diff);
 }
 
 void PedsimMovement::moveRightLeg(float32 vel_x, float32 vel_y, float32 angle_diff){
-    right_leg_body_->SetLinearVelocity(b2Vec2(vel_x, vel_y));
+    double max_vel = 1.8;
+    double min_vel = -1.8;
+    double v_x = getValueInRange(vel_x, legs_max_speed, -legs_max_speed);
+    double v_y = getValueInRange(vel_y, legs_max_speed, -legs_max_speed);
+    right_leg_body_->SetLinearVelocity(b2Vec2(v_x, v_y));
     right_leg_body_->SetAngularVelocity(angle_diff);
 }
 
