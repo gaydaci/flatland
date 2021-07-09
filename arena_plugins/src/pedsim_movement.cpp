@@ -98,6 +98,8 @@ void PedsimMovement::OnInitialize(const YAML::Node &config){
     safety_dist_body_alpha = reader.Get<float>("safety_dist_body_alpha", 0.3);
 
     legs_max_speed = 1.8;
+
+    agentCallbackReceived = false;
 }
 
 void PedsimMovement::reconfigure(){
@@ -198,17 +200,18 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
         safety_dist_body_->SetColor(c);
         updateSafetyDistance();
     }
-    //Initialize agent
-    if(init_== true){
-        // Set initial leg position
-        resetLegPosition(person.twist.linear.x, person.twist.linear.y, 0.0);
-        init_ = false;
-    }
 
     float vel_x = person.twist.linear.x;
     float vel_y = person.twist.linear.y;
     float angle_soll = person.direction;
     float angle_ist = body_->GetAngle();
+
+    //Initialize agent
+    if(init_== true && agentCallbackReceived){
+        // Set initial leg position
+        resetLegPosition(person.pose.position.x, person.pose.position.y, angle_soll);
+        init_ = false;
+    }
 
     //Set pedsim_agent position in flatland simulator
     body_->SetTransform(b2Vec2(person.pose.position.x, person.pose.position.y), angle_soll);
@@ -241,8 +244,9 @@ void PedsimMovement::BeforePhysicsStep(const Timekeeper &timekeeper) {
                 break;
         }
         //Recorrect leg position according to true person position
-        if(wp_->is_leg_in_center())
+        if (wp_->is_leg_in_center()) {
             resetLegPosition(person.pose.position.x, person.pose.position.y, angle_soll);
+        }
         
     }else{
         resetLegPosition(person.pose.position.x, person.pose.position.y, angle_soll);
@@ -288,6 +292,7 @@ void PedsimMovement::resetLegPosition(float32 x, float32 y, float32 angle){
 }
 
 void PedsimMovement::agentCallback(const pedsim_msgs::AgentStatesConstPtr& agents){
+    agentCallbackReceived = true;
     agents_ = agents;
 }
 

@@ -143,6 +143,8 @@ class PedsimMovement : public ModelPlugin {
 
     float legs_max_speed;
 
+    bool agentCallbackReceived;
+
     float getValueInRange(float value_in, float value_max, float value_min);
 
     /**
