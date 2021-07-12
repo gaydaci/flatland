@@ -52,6 +52,8 @@
 #include <flatland_server/timekeeper.h>
 #include <flatland_server/world.h>
 #include<flatland_msgs/StepWorld.h>
+#include <std_msgs/Empty.h>
+#include<ros/ros.h>
 #include <string>
 
 namespace flatland_server {
@@ -66,10 +68,14 @@ class SimulationManager {
   double viz_pub_rate_;          ///< rate to publish visualization
   std::string world_yaml_file_;  ///< path to the world file
   bool train_mode_;  ///< train_mode_ selection, when true ,update by step, else
-
+  
   // add step_world_service in simulationManager
   Timekeeper timekeeper;
   ros::ServiceServer step_world_service_;
+  std::atomic_bool stop_step_world_flag_;
+  // it's needed because step_world running very quick and the local planner can not follow.
+  int sleep_time_ms_step_world_;
+  ros::Subscriber stop_step_world_sub_;
   double last_update_time_;
 
   /**
@@ -101,6 +107,8 @@ class SimulationManager {
    */
   bool callback_StepWorld(flatland_msgs::StepWorld::Request &request,
                           flatland_msgs::StepWorld::Response &response);
+
+  void callback_stop_StepWorld(std_msgs::Empty empty_msg);
 };
 };      // namespace flatland_server
 #endif  // FLATLAND_SERVER_SIMULATION_MANAGER_H

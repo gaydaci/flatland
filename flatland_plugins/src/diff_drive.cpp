@@ -57,6 +57,7 @@ namespace flatland_plugins {
 
 void DiffDrive::TwistCallback(const geometry_msgs::Twist& msg) {
   twist_msg_ = msg;
+  // ROS_INFO("cmd_vel received!!!");
 }
 
 void DiffDrive::OnInitialize(const YAML::Node& config) {
@@ -247,7 +248,8 @@ void DiffDrive::BeforePhysicsStep(const Timekeeper& timekeeper) {
   b2Vec2 linear_vel_local(twist_msg_.linear.x, 0);
   b2Vec2 linear_vel = b2body->GetWorldVector(linear_vel_local);
   float angular_vel = twist_msg_.angular.z;  // angular is independent of frames
-
+  // ROS_INFO_STREAM("diff_drive linear:\t" << linear_vel.x<<","<<linear_vel.y << " angular_vel:\t"
+  //                                        << angular_vel);
   // we want the velocity vector in the world frame at the center of mass
 
   // V_cm = V_o + W x r_cm/o

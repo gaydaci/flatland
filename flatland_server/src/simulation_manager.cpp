@@ -52,7 +52,8 @@
 #include <flatland_server/service_manager.h>
 #include <flatland_server/world.h>
 #include <ros/ros.h>
-
+#include <thread>
+#include <chrono>
 #include <exception>
 #include <limits>
 #include <string>
@@ -69,7 +70,9 @@ SimulationManager::SimulationManager(std::string world_yaml_file,
       show_viz_(show_viz),
       viz_pub_rate_(viz_pub_rate),
       world_yaml_file_(world_yaml_file),
-      train_mode_(train_mode) {
+      train_mode_(train_mode),
+      stop_step_world_flag_(true) {
+  sleep_time_ms_step_world_ = 0;
   ROS_INFO_NAMED("SimMan",
                  "Simulation params: world_yaml_file(%s) update_rate(%f), "
                  "step_size(%f) show_viz(%s), viz_pub_rate(%f)",
@@ -113,9 +116,19 @@ void SimulationManager::Main() {
   // advertise: step world service server
   if (train_mode_) {
     ros::NodeHandle nh;
+    nh.getParam("/sleep_time_ms_step_world", sleep_time_ms_step_world_);
     step_world_service_ = nh.advertiseService(
         "step_world", &SimulationManager::callback_StepWorld, this);
+    stop_step_world_sub_ = nh.subscribe(
+        "stop_step_world", 1, &SimulationManager::callback_stop_StepWorld,this,ros::TransportHints().tcpNoDelay());
+    
   }
+
+  // step world service may takes too long(step many steps inside)
+  
+  ros::AsyncSpinner spinner(4); // Use 4 threads
+  spinner.start();
+
 
   while (ros::ok() && run_simulator_) {
     // for updating visualization at a given rate
@@ -140,33 +153,7 @@ void SimulationManager::Main() {
       DebugVisualization::Get().Publish(
           timekeeper);  // publish debug visualization
     }
-
-    ros::spinOnce();
     rate.sleep();
-
-    // iterations++;
-    // if (iterations > 100) {
-    //   //
-    //   iterations--;
-    //   double cycle_time = rate.cycleTime().toSec() * 1000;
-    //   double expected_cycle_time = rate.expectedCycleTime().toSec() * 1000;
-    //   double cycle_util = cycle_time / expected_cycle_time * 100;  // in percent
-    //   double factor = timekeeper.GetStepSize() * 1000 / expected_cycle_time;
-    //   min_cycle_util = std::min(cycle_util, min_cycle_util);
-    //   max_cycle_util = std::max(cycle_util, max_cycle_util);
-    //   filtered_cycle_util = 0.99 * filtered_cycle_util + 0.01 * cycle_util;
-    //   ROS_INFO_THROTTLE_NAMED(
-    //       5, "SimMan",
-    //       "utilization: min %.1f%% max %.1f%% ave %.1f%%  factor: %.1f",
-    //       min_cycle_util, max_cycle_util, filtered_cycle_util, factor);
-    //   if(iterations>200){
-    //     iterations--;
-    //     ROS_INFO_COND_NAMED(
-    //         train_mode_, "SimMan",
-    //         "Suggested number of environments for training: %4d",
-    //         static_cast<int8>(1 / filtered_cycle_util));
-    //   }
-    // }
   }
   ROS_INFO_NAMED("SimMan", "Simulation loop ended");
 
@@ -178,9 +165,15 @@ void SimulationManager::Shutdown() {
   run_simulator_ = false;
 }
 
+void SimulationManager::callback_stop_StepWorld(std_msgs::Empty empty_msg){
+  stop_step_world_flag_ = true;
+}
+
 bool SimulationManager::callback_StepWorld(
     flatland_msgs::StepWorld::Request &request,
     flatland_msgs::StepWorld::Response &response) {
+  // clear the flag
+  stop_step_world_flag_=false;
   try {
     // ros::WallRate rate_set(update_rate_);
     // double required_duration=request.step_time.data;
@@ -202,10 +195,17 @@ bool SimulationManager::callback_StepWorld(
     };
     for (int i = 0; i < required_steps; i++)
     {
+      if (stop_step_world_flag_)
+      {
+        break;
+      }
+      if (sleep_time_ms_step_world_>0)
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time_ms_step_world_));
       world_->Update(timekeeper);  // Step physics by ros cycle time
     };
     last_update_time_ = ros::WallTime::now().toSec();
-    response.success = true;
+    // only stopping-step-world signal received, otherwise timeout.
+    response.success = stop_step_world_flag_;
     std::string current_time = std::to_string(timekeeper.GetSimTime().toSec());
     response.message = "current sim time(s):  " + current_time;
     // ros::Time current_time=timekeeper.GetSimTime();
