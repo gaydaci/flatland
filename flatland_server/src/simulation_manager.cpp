@@ -103,9 +103,6 @@ void SimulationManager::Main() {
     return;
   }
 
-  // delete world_;
-  // world_ = World::MakeWorld(map_layer_yaml_file_);
-
   if (show_viz_) world_->DebugVisualize();
 
   int iterations = 0;
@@ -125,12 +122,9 @@ void SimulationManager::Main() {
         "step_world", &SimulationManager::callback_StepWorld, this);
   }
 
-  // updating the map
-  // if (train_mode_ && map_file_ == "random_map") {
-  // if (train_mode_) {
+  // loading layers whenever /map is published, but callback only running when train mode on AND random map used as map_file
   ros::NodeHandle n;
-  ros::Subscriber goal_sub = n.subscribe("/chatter2", 1, &SimulationManager::callback, this);
-  // }
+  ros::Subscriber goal_sub = n.subscribe("/map", 1, &SimulationManager::callback, this);
 
   while (ros::ok() && run_simulator_) {
 
@@ -235,10 +229,10 @@ bool SimulationManager::callback_StepWorld(
   return true;
 }
 
-// void SimulationManager::callback(nav_msgs::OccupancyGrid msg) {
+void SimulationManager::callback(nav_msgs::OccupancyGrid msg) {
 // void SimulationManager::callback(geometry_msgs::PoseStamped msg) {
-void SimulationManager::callback(const std_msgs::String::ConstPtr& msg) {
-    std::string map_layer_yaml_file_(msg->data);
+// void SimulationManager::callback(const std_msgs::String::ConstPtr& msg) {
+  if (train_mode_ && map_file_ == "random_map"){
     YamlReader world_reader = YamlReader(map_layer_yaml_file_);
     YamlReader layers_reader = world_reader.Subnode("layers", YamlReader::LIST);
 
@@ -246,6 +240,8 @@ void SimulationManager::callback(const std_msgs::String::ConstPtr& msg) {
     world_->LoadLayers(layers_reader);
     world_->DebugVisualize(true);
     ROS_INFO_NAMED("World", "Map Layer loaded");
+  }
+
   }
 
 };  // namespace flatland_server
