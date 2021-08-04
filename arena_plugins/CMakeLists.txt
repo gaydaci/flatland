@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   flatland_msgs
   std_msgs
   nav_msgs
+  pedsim_msgs
 )
 
 
@@ -79,7 +80,12 @@ endforeach()
 # Declare a C++ library
 add_library(arena_plugins_lib
   src/random_move.cpp
+  src/random_wandering.cpp
   src/tween2.cpp
+  src/pedsim_movement.cpp
+  src/vehicle_movement.cpp
+  src/triangle_profile.cpp
+  src/pose_pub.cpp
 )
 
 add_dependencies(arena_plugins_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

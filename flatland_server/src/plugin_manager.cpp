@@ -77,7 +77,9 @@ PluginManager::~PluginManager() {
 
 void PluginManager::BeforePhysicsStep(const Timekeeper &timekeeper_) {
   for (const auto &model_plugin : model_plugins_) {
-    model_plugin->BeforePhysicsStep(timekeeper_);
+    if(model_plugin->GetModel()->IsEnabled()){
+      model_plugin->BeforePhysicsStep(timekeeper_);
+    }
   }
   for (const auto &world_plugin : world_plugins_) {
     world_plugin->BeforePhysicsStep(timekeeper_);
@@ -86,7 +88,9 @@ void PluginManager::BeforePhysicsStep(const Timekeeper &timekeeper_) {
 
 void PluginManager::AfterPhysicsStep(const Timekeeper &timekeeper_) {
   for (const auto &model_plugin : model_plugins_) {
-    model_plugin->AfterPhysicsStep(timekeeper_);
+    if(model_plugin->GetModel()->IsEnabled()){
+      model_plugin->AfterPhysicsStep(timekeeper_);
+    }
   }
   for (const auto &world_plugin : world_plugins_) {
     world_plugin->AfterPhysicsStep(timekeeper_);
@@ -100,6 +104,14 @@ void PluginManager::DeleteModelPlugin(Model *model) {
                        return p->GetModel() == model;
                      }),
       model_plugins_.end());
+}
+
+void PluginManager::ReconfigureModelPlugin(Model *model) {
+  for (const auto &plugin : model_plugins_) {
+    if(plugin->GetModel() == model){
+      plugin->reconfigure();
+    }
+  }
 }
 
 void PluginManager::LoadModelPlugin(Model *model, YamlReader &plugin_reader) {

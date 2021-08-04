@@ -162,29 +162,58 @@ void ModelBody::ConfigFootprintDef(YamlReader &footprint_reader,
 void ModelBody::LoadCircleFootprint(YamlReader &footprint_reader) {
   Vec2 center = footprint_reader.GetVec2("center", Vec2(0, 0));
   double radius = footprint_reader.Get<double>("radius");
+  
+  b2FixtureDef fd;
+  ConfigFootprintDef(footprint_reader, fd);
 
-  b2FixtureDef fixture_def;
-  ConfigFootprintDef(footprint_reader, fixture_def);
-
-  b2CircleShape shape;
-  shape.m_p.Set(center.x, center.y);
-  shape.m_radius = radius;
-
-  fixture_def.shape = &shape;
-  physics_body_->CreateFixture(&fixture_def);
+  b2CircleShape cs;
+  cs.m_p.Set(center.x, center.y);
+  cs.m_radius = radius;
+  c_shape.push_back(cs);
+  fd.shape = &c_shape.back();
+  c_fixture_defs.push_back(fd);
+  b2Fixture* fixture = physics_body_->CreateFixture(&(c_fixture_defs.back()));
+  fixtures.push_back(fixture);
+  // physics_body_->DestroyFixture(fix);
 }
 
 void ModelBody::LoadPolygonFootprint(YamlReader &footprint_reader) {
   std::vector<b2Vec2> points =
       footprint_reader.GetList<b2Vec2>("points", 3, b2_maxPolygonVertices);
 
-  b2FixtureDef fixture_def;
-  ConfigFootprintDef(footprint_reader, fixture_def);
+  b2FixtureDef fd;
+  ConfigFootprintDef(footprint_reader, fd);
 
-  b2PolygonShape shape;
-  shape.Set(points.data(), points.size());
+  b2PolygonShape ps;
+  ps.Set(points.data(), points.size());
+  // shape = ps;
+  p_shape.push_back(ps);
+  fd.shape = &p_shape.back();
+  p_fixture_defs.push_back(fd);
+  b2Fixture* fixture = physics_body_->CreateFixture(&(p_fixture_defs.back()));
+  fixtures.push_back(fixture);
+  // physics_body_->DestroyFixture(fix);
+}
 
-  fixture_def.shape = &shape;
-  physics_body_->CreateFixture(&fixture_def);
+void ModelBody::DisableBody(){
+  for (int i = 0; i < fixtures.size(); i++){
+    physics_body_->DestroyFixture(fixtures[i]);
+  }
+
+  fixtures.clear();
+}
+
+void ModelBody::EnableBody(){
+  for (int i = 0; i < p_fixture_defs.size(); i++) {
+    p_fixture_defs[i].shape = &p_shape[i];
+    b2Fixture* fixture = physics_body_->CreateFixture(&p_fixture_defs[i]);
+    fixtures.push_back(fixture);
+  }
+
+  for (int i = 0; i < c_fixture_defs.size(); i++) {
+    c_fixture_defs[i].shape = &c_shape[i];
+    b2Fixture* fixture = physics_body_->CreateFixture(&c_fixture_defs[i]);
+    fixtures.push_back(fixture);
+  }
 }
 };

@@ -56,6 +56,7 @@
 #include<ros/ros.h>
 #include <string>
 
+
 namespace flatland_server {
 
 class SimulationManager {
@@ -88,8 +89,7 @@ class SimulationManager {
    * behaving ones
    */
   SimulationManager(std::string world_yaml_file, double update_rate,
-                    double step_size, bool show_viz, double viz_pub_rate,
-                    bool train_mode);
+                    double step_size, bool show_viz, double viz_pub_rate,bool train_mode);
 
   /**
    * This method contains the loop that runs the simulation

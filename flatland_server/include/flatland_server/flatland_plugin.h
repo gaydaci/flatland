@@ -84,6 +84,11 @@ class FlatlandPlugin {
  */
   virtual void OnInitialize(const YAML::Node &config) = 0;
 
+    /**
+ * @brief For reconfiguring plugin, when model was disabled.
+ */
+  virtual void reconfigure() {}
+
   /**
    * @brief This method is called before the Box2D physics step
    * @param[in] timekeeper provide time related information

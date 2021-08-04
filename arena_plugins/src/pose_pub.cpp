@@ -7,9 +7,10 @@
  *    \ \_\ \_\ \___/  \ \_\ \___,_\ \_,__/\ \____/\ \__\/\____/
  *     \/_/\/_/\/__/    \/_/\/__,_ /\/___/  \/___/  \/__/\/___/
  * @copyright Copyright 2017 Avidbots Corp.
- * @name	DiffDrive.cpp
- * @brief   DiffDrive plugin
- * @author  Mike Brousseau
+ * @name	pose_pub.cpp
+ * @brief   pose_pub.cpp
+ * @author  Junhui Li
+ * @date  29.1. 2021
  *
  * Software License Agreement (BSD License)
  *
@@ -45,7 +46,7 @@
  */
 
 #include <Box2D/Box2D.h>
-#include <flatland_plugins/diff_drive.h>
+#include <arena_plugins/pose_pub.h>
 #include <flatland_server/debug_visualization.h>
 #include <flatland_server/model_plugin.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -55,28 +56,27 @@
 
 namespace flatland_plugins {
 
-void DiffDrive::TwistCallback(const geometry_msgs::Twist& msg) {
-  twist_msg_ = msg;
-  // ROS_INFO("cmd_vel received!!!");
-}
+// void PosePub::TwistCallback(const geometry_msgs::Twist& msg) {
+//   twist_msg_ = msg;
+// }
 
-void DiffDrive::OnInitialize(const YAML::Node& config) {
+void PosePub::OnInitialize(const YAML::Node& config) {
   YamlReader reader(config);
   enable_odom_pub_ = reader.Get<bool>("enable_odom_pub", true);
-  enable_twist_pub_ = reader.Get<bool>("enable_twist_pub", true);
+  // enable_twist_pub_ = reader.Get<bool>("enable_twist_pub", true);
   std::string body_name = reader.Get<std::string>("body");
   std::string odom_frame_id = reader.Get<std::string>("odom_frame_id", "odom");
 
-  std::string twist_topic = reader.Get<std::string>("twist_sub", ros::this_node::getNamespace()+"/cmd_vel");
+  // std::string twist_topic = reader.Get<std::string>("twist_sub", "cmd_vel");
   std::string odom_topic =
-      reader.Get<std::string>("odom_pub", "/odometry/filtered");
+      reader.Get<std::string>("odom_pub", "odometry/filtered");
   std::string ground_truth_topic =
-      reader.Get<std::string>("ground_truth_pub", ros::this_node::getNamespace()+"/odometry/ground_truth");
-  std::string twist_pub_topic = reader.Get<std::string>("twist_pub", ros::this_node::getNamespace()+"/twist");
+      reader.Get<std::string>("ground_truth_pub", "odometry/ground_truth");
+  // std::string twist_pub_topic = reader.Get<std::string>("twist_pub", "twist");
 
   // noise are in the form of linear x, linear y, angular variances
-  std::vector<double> odom_twist_noise =
-      reader.GetList<double>("odom_twist_noise", {0, 0, 0}, 3, 3);
+  // std::vector<double> odom_twist_noise =
+  // reader.GetList<double>("odom_twist_noise", {0, 0, 0}, 3, 3);
   std::vector<double> odom_pose_noise =
       reader.GetList<double>("odom_pose_noise", {0, 0, 0}, 3, 3);
 
@@ -92,13 +92,13 @@ void DiffDrive::OnInitialize(const YAML::Node& config) {
   odom_pose_covar_default[7] = odom_pose_noise[1];
   odom_pose_covar_default[35] = odom_pose_noise[2];
 
-  std::array<double, 36> odom_twist_covar_default = {0};
-  odom_twist_covar_default[0] = odom_twist_noise[0];
-  odom_twist_covar_default[7] = odom_twist_noise[1];
-  odom_twist_covar_default[35] = odom_twist_noise[2];
+  // std::array<double, 36> odom_twist_covar_default = {0};
+  // odom_twist_covar_default[0] = odom_twist_noise[0];
+  // odom_twist_covar_default[7] = odom_twist_noise[1];
+  // odom_twist_covar_default[35] = odom_twist_noise[2];
 
-  auto odom_twist_covar = reader.GetArray<double, 36>("odom_twist_covariance",
-                                                      odom_twist_covar_default);
+  // auto odom_twist_covar = reader.GetArray<double, 36>("odom_twist_covariance",
+  //                                                     odom_twist_covar_default);
   auto odom_pose_covar = reader.GetArray<double, 36>("odom_pose_covariance",
                                                      odom_pose_covar_default);
 
@@ -110,31 +110,30 @@ void DiffDrive::OnInitialize(const YAML::Node& config) {
   }
 
   // publish and subscribe to topics
-  twist_sub_ = nh_.subscribe(twist_topic, 1, &DiffDrive::TwistCallback, this);
+  // twist_sub_ = nh_.subscribe(twist_topic, 1, &PosePub::TwistCallback, this);
   if (enable_odom_pub_) {
     odom_pub_ = nh_.advertise<nav_msgs::Odometry>(odom_topic, 1);
     ground_truth_pub_ =
         nh_.advertise<nav_msgs::Odometry>(ground_truth_topic, 1);
   }
 
-  if (enable_twist_pub_) {
-    twist_pub_ = nh_.advertise<geometry_msgs::TwistStamped>(twist_pub_topic, 1);
-  }
+  // if (enable_twist_pub_) {
+  //   twist_pub_ = nh_.advertise<geometry_msgs::TwistStamped>(twist_pub_topic, 1);
+  // }
 
   // init the values for the messages
-  // fix ns issue by lei
   // ground_truth_msg_.header.frame_id = odom_frame_id;
   ground_truth_msg_.header.frame_id = 
       tf::resolve("", GetModel()->NameSpaceTF(odom_frame_id));
   ground_truth_msg_.child_frame_id =
       tf::resolve("", GetModel()->NameSpaceTF(body_->name_));
-  ground_truth_msg_.twist.covariance.fill(0);
+  // ground_truth_msg_.twist.covariance.fill(0);
   ground_truth_msg_.pose.covariance.fill(0);
   odom_msg_ = ground_truth_msg_;
 
   // copy from std::array to boost array
   for (unsigned int i = 0; i < 36; i++) {
-    odom_msg_.twist.covariance[i] = odom_twist_covar[i];
+    // odom_msg_.twist.covariance[i] = odom_twist_covar[i];
     odom_msg_.pose.covariance[i] = odom_pose_covar[i];
   }
 
@@ -147,24 +146,22 @@ void DiffDrive::OnInitialize(const YAML::Node& config) {
         std::normal_distribution<double>(0.0, sqrt(odom_pose_noise[i]));
   }
 
-  for (unsigned int i = 0; i < 3; i++) {
-    noise_gen_[i + 3] =
-        std::normal_distribution<double>(0.0, sqrt(odom_twist_noise[i]));
-  }
+  // for (unsigned int i = 0; i < 3; i++) {
+  //   noise_gen_[i + 3] =
+  //       std::normal_distribution<double>(0.0, sqrt(odom_twist_noise[i]));
+  // }
 
-  ROS_DEBUG_NAMED("DiffDrive",
+  ROS_DEBUG_NAMED("PosePub",
                   "Initialized with params body(%p %s) odom_frame_id(%s) "
-                  "twist_sub(%s) odom_pub(%s) ground_truth_pub(%s) "
-                  "odom_pose_noise({%f,%f,%f}) odom_twist_noise({%f,%f,%f}) "
+                  "odom_pub(%s) ground_truth_pub(%s) "
+                  "odom_pose_noise({%f,%f,%f})"
                   "pub_rate(%f)\n",
                   body_, body_->name_.c_str(), odom_frame_id.c_str(),
-                  twist_topic.c_str(), odom_topic.c_str(),
-                  ground_truth_topic.c_str(), odom_pose_noise[0],
-                  odom_pose_noise[1], odom_pose_noise[2], odom_twist_noise[0],
-                  odom_twist_noise[1], odom_twist_noise[2], pub_rate);
+                  odom_topic.c_str(), ground_truth_topic.c_str(), odom_pose_noise[0],
+                  odom_pose_noise[1], odom_pose_noise[2], pub_rate);
 }
 
-void DiffDrive::AfterPhysicsStep(const Timekeeper& timekeeper) {
+void PosePub::AfterPhysicsStep(const Timekeeper& timekeeper) {
   bool publish = update_timer_.CheckUpdate(timekeeper);
 
   b2Body* b2body = body_->physics_body_;
@@ -205,68 +202,17 @@ void DiffDrive::AfterPhysicsStep(const Timekeeper& timekeeper) {
 
     if (enable_odom_pub_) {
       ground_truth_pub_.publish(ground_truth_msg_);
-      odom_pub_.publish(odom_msg_);
+      // odom_pub_.publish(odom_msg_);
     }
-
-    if (enable_twist_pub_) {
-      // Transform global frame velocity into local frame to simulate encoder
-      // readings
-      geometry_msgs::TwistStamped twist_pub_msg;
-      twist_pub_msg.header.stamp = timekeeper.GetSimTime();
-      twist_pub_msg.header.frame_id = odom_msg_.child_frame_id;
-
-      // Forward velocity in twist.linear.x
-      twist_pub_msg.twist.linear.x = cos(angle) * linear_vel_local.x +
-                                     sin(angle) * linear_vel_local.y +
-                                     noise_gen_[3](rng_);
-
-      // Angular velocity in twist.angular.z
-      twist_pub_msg.twist.angular.z = angular_vel + noise_gen_[5](rng_);
-      twist_pub_.publish(twist_pub_msg);
-    }
-
-    // publish odom tf
-    geometry_msgs::TransformStamped odom_tf;
-    odom_tf.header = odom_msg_.header;
-    odom_tf.child_frame_id = odom_msg_.child_frame_id;
-    odom_tf.transform.translation.x = odom_msg_.pose.pose.position.x;
-    odom_tf.transform.translation.y = odom_msg_.pose.pose.position.y;
-    odom_tf.transform.translation.z = 0;
-    odom_tf.transform.rotation = odom_msg_.pose.pose.orientation;
-    tf_broadcaster.sendTransform(odom_tf);
   }
-
 }
 
-void DiffDrive::BeforePhysicsStep(const Timekeeper& timekeeper) {
+void PosePub::BeforePhysicsStep(const Timekeeper& timekeeper) {
   b2Body* b2body = body_->physics_body_;
-
   b2Vec2 position = b2body->GetPosition();
   float angle = b2body->GetAngle();
-
-  // we apply the twist velocities, this must be done every physics step to make
-  // sure Box2D solver applies the correct velocity through out. The velocity
-  // given in the twist message should be in the local frame
-  b2Vec2 linear_vel_local(twist_msg_.linear.x, 0);
-  b2Vec2 linear_vel = b2body->GetWorldVector(linear_vel_local);
-  float angular_vel = twist_msg_.angular.z;  // angular is independent of frames
-  // ROS_INFO_STREAM("diff_drive linear:\t" << linear_vel.x<<","<<linear_vel.y << " angular_vel:\t"
-  //                                        << angular_vel);
-  // we want the velocity vector in the world frame at the center of mass
-
-  // V_cm = V_o + W x r_cm/o
-  // velocity at center of mass equals to the velocity at the body origin plus,
-  // angular velocity cross product the displacement from the body origin to the
-  // center of mass
-
-  // r is the vector from body origin to the CM in world frame
-  b2Vec2 r = b2body->GetWorldCenter() - position;
-  b2Vec2 linear_vel_cm = linear_vel + angular_vel * b2Vec2(-r.y, r.x);
-
-  b2body->SetLinearVelocity(linear_vel_cm);
-  b2body->SetAngularVelocity(angular_vel);
 }
 }
 
-PLUGINLIB_EXPORT_CLASS(flatland_plugins::DiffDrive,
+PLUGINLIB_EXPORT_CLASS(flatland_plugins::PosePub,
                        flatland_server::ModelPlugin)

@@ -7,9 +7,10 @@
  *    \ \_\ \_\ \___/  \ \_\ \___,_\ \_,__/\ \____/\ \__\/\____/
  *     \/_/\/_/\/__/    \/_/\/__,_ /\/___/  \/___/  \/__/\/___/
  * @copyright Copyright 2017 Avidbots Corp.
- * @name	model_plugin.cpp
- * @brief	Implementation for ModelPlugin pluginlib plugins
- * @author Chunshang Li
+ * @name	pose_pub.h
+ * @brief   pose publish plugin
+ * @author  Junhui Li
+ * @date 29.1.2021
  *
  * Software License Agreement (BSD License)
  *
@@ -44,51 +45,67 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <Box2D/Box2D.h>
+#include <flatland_plugins/update_timer.h>
 #include <flatland_server/model_plugin.h>
+#include <flatland_server/timekeeper.h>
+#include <geometry_msgs/Twist.h>
+#include <nav_msgs/Odometry.h>
+#include <tf/transform_broadcaster.h>
+#include <random>
 
-namespace flatland_server {
+#ifndef FLATLAND_PLUGINS_POSEPUB_H
+#define FLATLAND_PLUGINS_POSEPUB_H
 
-Model *ModelPlugin::GetModel() { return model_; }
+using namespace flatland_server;
 
-void ModelPlugin::Initialize(const std::string &type, const std::string &name,
-                             Model *model, const YAML::Node &config) {
-  type_ = type;
-  name_ = name;
-  model_ = model;
-  plugin_type_ = PluginType::Model;
-  // model_->namespace_ will only be used as tf_prefix
-  nh_ = ros::NodeHandle(model_->namespace_);
-  // nh_ = ros::NodeHandle();
-  OnInitialize(config);
-}
+namespace flatland_plugins {
 
-bool ModelPlugin::FilterContact(b2Contact *contact, Entity *&entity,
-                                b2Fixture *&this_fixture,
-                                b2Fixture *&other_fixture) {
-  b2Fixture *f_A = contact->GetFixtureA();
-  b2Fixture *f_B = contact->GetFixtureB();
-  Body *b_A = static_cast<Body *>(f_A->GetBody()->GetUserData());
-  Body *b_B = static_cast<Body *>(f_B->GetBody()->GetUserData());
-  Entity *e_A = b_A->GetEntity();
-  Entity *e_B = b_B->GetEntity();
+class PosePub : public flatland_server::ModelPlugin {
+ public:
+  ros::Subscriber twist_sub_;
+  ros::Publisher odom_pub_;
+  ros::Publisher ground_truth_pub_;
+  ros::Publisher twist_pub_;
+  Body* body_;
+  geometry_msgs::Twist twist_msg_;
+  nav_msgs::Odometry odom_msg_;
+  nav_msgs::Odometry ground_truth_msg_;
+  UpdateTimer update_timer_;
+  tf::TransformBroadcaster tf_broadcaster;  ///< For publish ROS TF
+  bool enable_odom_pub_;   ///< YAML parameter to enable odom publishing
+  bool enable_twist_pub_;  ///< YAML parameter to enable twist publishing
 
-  if (e_A == model_) {
-    entity = e_B;
-    this_fixture = f_A;
-    other_fixture = f_B;
-  } else if (e_B == model_) {
-    entity = e_A;
-    this_fixture = f_B;
-    other_fixture = f_A;
-  } else {
-    return false;
-  }
-  return true;
-}
+  std::default_random_engine rng_;
+  std::array<std::normal_distribution<double>, 6> noise_gen_;
 
-bool ModelPlugin::FilterContact(b2Contact *contact) {
-  b2Fixture *f1, *f2;
-  Entity *e;
-  return FilterContact(contact, e, f1, f2);
-}
-};  // namespace flatland_server
+  /**
+   * @name          OnInitialize
+   * @brief         override the BeforePhysicsStep method
+   * @param[in]     config The plugin YAML node
+   */
+  void OnInitialize(const YAML::Node& config) override;
+  /**
+   * @name          BeforePhysicsStep
+   * @brief         override the BeforePhysicsStep method
+   * @param[in]     config The plugin YAML node
+   */
+  void BeforePhysicsStep(const Timekeeper& timekeeper) override;
+  /**
+   * @name        TwistCallback
+   * @brief       callback to apply twist (velocity and omega)
+   * @param[in]   timestep how much the physics time will increment
+   */
+  // void TwistCallback(const geometry_msgs::Twist& msg);
+
+   /**
+   * @name          AfterPhysicsStep
+   * @brief         override the BeforePhysicsStep method
+   * @param[in]     config The plugin YAML node
+   */
+
+  void AfterPhysicsStep(const Timekeeper& timekeeper) override;
+};
+};
+
+#endif

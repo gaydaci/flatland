@@ -96,6 +96,12 @@ class PluginManager {
    */
   void DeleteModelPlugin(Model *model);
 
+
+  /**
+   * @brief Reconfigures the appropriate plugins of model.
+   */
+  void ReconfigureModelPlugin(Model *model);
+
   /**
    * @brief Load model plugins
    * @param[in] model The model that this plugin is tied to

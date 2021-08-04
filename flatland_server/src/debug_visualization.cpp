@@ -42,6 +42,8 @@
  *  LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
+ * 
+ *  Modified by Ronja Gueldenring
  */
 
 #include "flatland_server/debug_visualization.h"
@@ -84,6 +86,10 @@ void DebugVisualization::JointToMarkers(
   marker.color.a = a;
   marker.type = marker.LINE_LIST;
   marker.scale.x = 0.01;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
 
   geometry_msgs::Point p_a1, p_a2, p_b1, p_b2;
   p_a1.x = joint->GetAnchorA().x;
@@ -126,6 +132,7 @@ void DebugVisualization::BodyToMarkers(visualization_msgs::MarkerArray& markers,
   while (fixture != NULL) {  // traverse fixture linked list
     visualization_msgs::Marker marker;
     marker.header.frame_id = "map";
+    marker.lifetime = ros::Duration(0.5);
     marker.id = markers.markers.size();
     marker.color.r = r;
     marker.color.g = g;
@@ -156,20 +163,30 @@ void DebugVisualization::BodyToMarkers(visualization_msgs::MarkerArray& markers,
 
       } break;
 
-      case b2Shape::e_polygon: {  // Convert b2Polygon -> LINE_STRIP
+      case b2Shape::e_polygon: {
+        //Added by Ronja Gueldenring ,optimized by Junhui Li
+        //Publishing a filled polygon instead of a LINE_STRIP
         b2PolygonShape* poly = (b2PolygonShape*)fixture->GetShape();
-        marker.type = marker.LINE_STRIP;
-        marker.scale.x = 0.03;  // 3cm wide lines
+        marker.type = marker.TRIANGLE_LIST;
+        marker.scale.x = 1;  
+        marker.scale.y = 1;  
+        marker.scale.z = 1; 
+        geometry_msgs::Point p;
+        for (int i=0; i<poly->m_count-2; i++){
+            p.x = poly->m_vertices[0].x;
+            p.y = poly->m_vertices[0].y;
+            marker.points.push_back(p);
 
-        for (int i = 0; i < poly->m_count; i++) {
-          geometry_msgs::Point p;
-          p.x = poly->m_vertices[i].x;
-          p.y = poly->m_vertices[i].y;
-          marker.points.push_back(p);
-        }
-        marker.points.push_back(marker.points[0]);  // Close the shape
+            p.x = poly->m_vertices[i+1].x;
+            p.y = poly->m_vertices[i+1].y;
+            marker.points.push_back(p);
 
-      } break;
+            p.x = poly->m_vertices[i+2].x;
+            p.y = poly->m_vertices[i+2].y;
+            marker.points.push_back(p);
+          }
+        // marker.points.push_back(marker.points[0]);  // Close the shape
+      }break;
 
       case b2Shape::e_edge: {    // Convert b2Edge -> LINE_LIST
         geometry_msgs::Point p;  // b2Edge uses vertex1 and 2 for its edges
@@ -242,7 +259,7 @@ void DebugVisualization::Publish(const Timekeeper& timekeeper) {
 
   if (to_delete.size() > 0) {
     for (const auto& topic : to_delete) {
-      ROS_WARN_NAMED("DebugVis", "Deleting topic %s", topic.c_str());
+      ROS_INFO_NAMED("DebugVis", "Deleting topic %s", topic.c_str());
       topics_.erase(topic);
     }
     PublishTopicList();

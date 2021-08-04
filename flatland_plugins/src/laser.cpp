@@ -63,7 +63,7 @@ void Laser::OnInitialize(const YAML::Node &config) {
   ParseParameters(config);
 
   update_timer_.SetRate(update_rate_);
-  scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(topic_, 1);
+  scan_publisher_ = nh_.advertise<sensor_msgs::LaserScan>(ros::this_node::getNamespace()+topic_, 1);
 
   // construct the body to laser transformation matrix once since it never
   // changes
@@ -222,7 +222,12 @@ void Laser::ParseParameters(const YAML::Node &config) {
   YamlReader reader(config);
   std::string body_name = reader.Get<std::string>("body");
   topic_ = reader.Get<std::string>("topic", "scan");
+  // use an index for random wanderer since we can have multiple of them
+  if (topic_ == "/randomwanderer/scan") {
+    topic_ += std::to_string(GetModel()->model_index_);
+  }
   frame_id_ = reader.Get<std::string>("frame", GetName());
+  frame_id_ = ros::this_node::getNamespace() + "/" + frame_id_ + std::to_string(GetModel()->model_index_);
   broadcast_tf_ = reader.Get<bool>("broadcast_tf", true);
   update_rate_ = reader.Get<double>("update_rate",
                                     std::numeric_limits<double>::infinity());
