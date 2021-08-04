@@ -68,7 +68,8 @@ void DiffDrive::OnInitialize(const YAML::Node& config) {
   std::string odom_frame_id = reader.Get<std::string>("odom_frame_id", "odom");
 
   std::string twist_topic = reader.Get<std::string>("twist_sub", ros::this_node::getNamespace()+"/cmd_vel");
-  std::string odom_topic =
+  // it's weired that relative name not work, so we change to use absolute path
+  std::string odom_topic = ros::this_node::getNamespace()+std::string("/")+
       reader.Get<std::string>("odom_pub", "/odometry/filtered");
   std::string ground_truth_topic =
       reader.Get<std::string>("ground_truth_pub", ros::this_node::getNamespace()+"/odometry/ground_truth");
@@ -113,6 +114,8 @@ void DiffDrive::OnInitialize(const YAML::Node& config) {
   twist_sub_ = nh_.subscribe(twist_topic, 1, &DiffDrive::TwistCallback, this);
   if (enable_odom_pub_) {
     odom_pub_ = nh_.advertise<nav_msgs::Odometry>(odom_topic, 1);
+    // odom_pub_ = nh_.advertise<nav_msgs::Odometry>("odomtest", 1);
+    
     ground_truth_pub_ =
         nh_.advertise<nav_msgs::Odometry>(ground_truth_topic, 1);
   }

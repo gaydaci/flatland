@@ -18,7 +18,6 @@ find_package(catkin REQUIRED COMPONENTS
   flatland_msgs
   std_msgs
   nav_msgs
-  pedsim_msgs
 )
 
 
@@ -82,8 +81,6 @@ add_library(arena_plugins_lib
   src/random_move.cpp
   src/random_wandering.cpp
   src/tween2.cpp
-  src/pedsim_movement.cpp
-  src/vehicle_movement.cpp
   src/triangle_profile.cpp
   src/pose_pub.cpp
 )
