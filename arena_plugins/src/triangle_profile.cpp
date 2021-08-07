@@ -15,9 +15,6 @@ namespace flatland_plugins {
 
     
     double TriangleProfile::get_speed_multiplier(double body_speed){
-        if (body_speed < 0.01) {
-            return 1.0;
-        }
         double now = ros::Time::now().toSec();
         double max_vel = 4 * body_speed;
         double m = max_vel / (step_time_ * 0.5);
@@ -52,9 +49,11 @@ namespace flatland_plugins {
                 break;
         }
 
-        assert(body_speed > 0.0);
-        return leg_vel/body_speed;
+        if (body_speed < 0.01) {
+            return 1.0;
+        }
 
+        return leg_vel/body_speed;
     }
 
     void TriangleProfile::nextState(){
