@@ -102,6 +102,7 @@ Layer::Layer(b2World *physics_world, CollisionFilterRegistry *cfr,
     edge.m_vertex2 *= scale;
 
     b2FixtureDef fixture_def;
+    fixture_def.restitution = 1;
     fixture_def.shape = &edge;
     fixture_def.filter.categoryBits = category_bits;
     fixture_def.filter.maskBits = fixture_def.filter.categoryBits;
@@ -233,6 +234,7 @@ void Layer::LoadFromBitmap(const cv::Mat &bitmap, double occupied_thresh,
     fixture_def.shape = &edge;
     fixture_def.filter.categoryBits = category_bits;
     fixture_def.filter.maskBits = fixture_def.filter.categoryBits;
+    fixture_def.restitution = 1;
     body_->physics_body_->CreateFixture(&fixture_def);
   };
 

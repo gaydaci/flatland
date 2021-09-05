@@ -20,7 +20,7 @@ class RandomMove : public ModelPlugin {
   Body* body_;  // The body this plugin is attached to
   float linear_velocity_;  // The linear verlocity that the objects keeps.
   float angular_velocity_max_; // The maxmum angular_velocity of the objects.
-
+  float angle_;
   /**
    * @name          OnInitialize
    * @brief         override the OnInitialize method
@@ -32,7 +32,9 @@ class RandomMove : public ModelPlugin {
    * @brief         override the BeforePhysicsStep method
    * @param[in]     config The plugin YAML node
    */
-  void BeforePhysicsStep(const Timekeeper& Timekeeper) override;
+
+  void BeginContact(b2Contact *contact) override;
+  void BeforePhysicsStep(const Timekeeper &timekeeper) override;
 
   float randomRange(const float range_lo, const float range_hi);
 };
