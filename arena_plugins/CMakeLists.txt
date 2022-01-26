@@ -66,7 +66,7 @@ catkin_package(
 include_directories(
   include
   ${PROJECT_SOURCE_DIR}/../flatland_plugins/include/thirdparty/tweeny
-  ${PROJECT_SOURCE_DIR}/../flatland_plugins/include/thirdparty 
+  ${PROJECT_SOURCE_DIR}/../flatland_plugins/include/thirdparty
   ${catkin_INCLUDE_DIRS}
   ${YAML_CPP_INCLUDE_DIRS}
   ${Eigen3_INCLUDE_DIRS}
@@ -85,6 +85,8 @@ add_library(arena_plugins_lib
   src/vehicle_movement.cpp
   src/triangle_profile.cpp
   src/pose_pub.cpp
+  src/sound.cpp
+  src/pedsim_sound.cpp
 )
 
 add_dependencies(arena_plugins_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

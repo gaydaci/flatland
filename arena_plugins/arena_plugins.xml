@@ -14,4 +14,10 @@
     <class type="flatland_plugins::PosePub" base_class_type="flatland_server::ModelPlugin">
     <description>publish the pose of dynamic agents</description>
   </class>
+  <class type="flatland_plugins::SoundPlugin" base_class_type="flatland_server::ModelPlugin">
+    <description>Plugin to enable listener (myrobot) perceive sounds using OpenAL-Soft library</description>
+  </class>
+  <class type="flatland_plugins::PedsimSound" base_class_type="flatland_server::ModelPlugin">
+    <description>Plugin to enable Pedsim Agent bodies to emmit sounds according to their social state using OpenAL-Soft library</description>
+  </class>
 </library>
