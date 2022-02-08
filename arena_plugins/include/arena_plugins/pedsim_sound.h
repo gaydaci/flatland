@@ -9,10 +9,11 @@
 #include <arena_sound_srvs/PrepareSource.h>
 #include <arena_sound_srvs/PlaySource.h>
 #include <arena_sound_srvs/UpdateSourcePos.h>
-#include <arena_sound_srvs/SourceStopped.h>
+#include <arena_sound_srvs/GetSourceVolume.h>
 
 #include <pedsim_msgs/AgentStates.h>
 #include <pedsim_msgs/AgentState.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #ifndef FLATLAND_PLUGINS_PEDSIM_SOUND_H
 #define FLATLAND_PLUGINS_PEDSIM_SOUND_H
@@ -28,14 +29,11 @@ class PedsimSound : public ModelPlugin {
   ros::ServiceClient prepare_source_client_;
   ros::ServiceClient update_source_position_client_;
   ros::ServiceClient play_source_client_;
-  ros::ServiceClient source_stopped_client_;
+  ros::ServiceClient get_source_volume_client_;
 
   int source_id;
 
-  bool source_stopped;
-
   bool agentCallbackReceived;
-
   bool started_playing;
 
   std::string curr_social_state;
@@ -44,12 +42,16 @@ class PedsimSound : public ModelPlugin {
   pedsim_msgs::AgentState agent;       ///< Pedsim Agent corresponding to source
   ros::Subscriber pedsim_agents_sub_;     ///< Subscriber to pedsim agents state
 
+  ros::Publisher marker_pub_;     ///< Publisher for the rviz visualization of the sound source
+
   // This function must be overridden for initialization. The YAML Node is
   // passed in for processing by the specific plugin
   void OnInitialize(const YAML::Node &config) override;
 
   //These functions is called before  the physics step
   void BeforePhysicsStep(const flatland_server::Timekeeper &timekeeper) override;
+
+  void publishSoundVisuals(float pos_x, float pos_y, double volume);
 
   void pedAgentsCallback(const pedsim_msgs::AgentStatesConstPtr& agents);
 

@@ -3,6 +3,8 @@
 #include <flatland_server/yaml_reader.h>
 #include <ros/ros.h>
 #include <ros/node_handle.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 namespace flatland_plugins {
 
@@ -31,6 +33,9 @@ void PedsimSound::OnInitialize(const YAML::Node &config) {
   agentCallbackReceived = false;
   started_playing=false;
   pedsim_agents_sub_ = nh_.subscribe("/pedsim_simulator/simulated_agents", 1, &PedsimSound::pedAgentsCallback, this);
+
+  std::string sound_viz_topic_ = "sound_viz_" + std::to_string(source_id);
+  marker_pub_ = nh_.advertise<visualization_msgs::Marker>(sound_viz_topic_, 1);
 
   prepare_source_client_ = nh_.serviceClient<arena_sound_srvs::PrepareSource>("prepare_source");
   arena_sound_srvs::PrepareSource srv;
@@ -84,6 +89,17 @@ void PedsimSound::BeforePhysicsStep(const Timekeeper &timekeeper) {
       ros::service::waitForService("play_source", 1000);
       if(play_source_client_.call(play_msg)) {
         started_playing = true;
+
+        get_source_volume_client_ = nh_.serviceClient<arena_sound_srvs::GetSourceVolume>("get_source_volume");
+        arena_sound_srvs::GetSourceVolume vol_msg;
+        vol_msg.request.source_id = source_id;
+        vol_msg.request.social_state = curr_social_state;
+
+        ros::service::waitForService("get_source_volume", 1000);
+        get_source_volume_client_.call(vol_msg);
+
+        publishSoundVisuals(pos_x, pos_y, vol_msg.response.volume);
+
         ROS_INFO("!!!! Source %d started playing", source_id);
       } else {
         ROS_ERROR("Source %d failed to call service play_source", source_id);
@@ -91,6 +107,19 @@ void PedsimSound::BeforePhysicsStep(const Timekeeper &timekeeper) {
     } else {
       prev_social_state = curr_social_state;
       curr_social_state = agent.social_state;
+
+      arena_sound_srvs::GetSourceVolume vol_msg;
+      vol_msg.request.source_id = source_id;
+      vol_msg.request.social_state = curr_social_state;
+
+      while (!get_source_volume_client_.isValid()) {
+        ROS_WARN("Reconnecting play_source_client-server...");
+        get_source_volume_client_.waitForExistence(ros::Duration(1.0));
+        get_source_volume_client_ = nh_.serviceClient<arena_sound_srvs::PlaySource>("get_source_volume", true);
+      }
+      get_source_volume_client_.call(vol_msg);
+
+      publishSoundVisuals(pos_x, pos_y, vol_msg.response.volume);
 
       if (curr_social_state.compare(prev_social_state)) {
         arena_sound_srvs::PlaySource play_msg;
@@ -115,6 +144,46 @@ void PedsimSound::BeforePhysicsStep(const Timekeeper &timekeeper) {
       }
     }
   }
+}
+
+void PedsimSound::publishSoundVisuals(float pos_x, float pos_y, double volume) {
+  
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = "map";
+  marker.header.stamp = ros::Time::now();
+  marker.ns = nh_.getNamespace();
+  marker.id = source_id;
+  marker.type = visualization_msgs::Marker::CYLINDER;
+  marker.action = visualization_msgs::Marker::ADD;
+
+  marker.pose.position.x = pos_x;
+  marker.pose.position.y = pos_y;
+  marker.pose.position.z = 0;
+
+  tf2::Quaternion q;  // use tf2 to convert 2d yaw -> 3d quaternion
+  q.setRPY(0, 0, body->GetPhysicsBody()->GetAngle());  // from euler angles: roll, pitch, yaw
+  marker.pose.orientation = tf2::toMsg(q);
+
+  float volume_factor = 1.5f;
+  marker.scale.z = 1.0;
+  marker.scale.x = volume_factor*volume;
+  marker.scale.y = volume_factor*volume;
+
+  marker.color.r = 0.0f;
+  marker.color.b = volume_factor*volume;
+  marker.color.g = 0.0f;
+  marker.color.a = 0.5f;
+
+  marker.lifetime = ros::Duration();
+
+  // ROS_INFO("marker_pub_.getNumSubscribers() %d", marker_pub_.getNumSubscribers());
+  if (marker_pub_.getNumSubscribers() < 1)
+  {
+    ROS_WARN("PedsimSound:: No subscriber for the marker!");
+  }
+
+  marker_pub_.publish(marker);
+
 }
 
 void PedsimSound::pedAgentsCallback(const pedsim_msgs::AgentStatesConstPtr& agents) {
