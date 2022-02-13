@@ -25,6 +25,10 @@ namespace flatland_plugins {
 class PedsimSound : public ModelPlugin {
   // Source body moving emmiting sounds
   flatland_server::Body *body;
+  
+  float source_gain; // Adjust source's overall gain
+               // Default 1.0 sound is unattenuated
+               // Amplification for values over 1.0
 
   ros::ServiceClient prepare_source_client_;
   ros::ServiceClient update_source_position_client_;

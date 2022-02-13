@@ -37,11 +37,14 @@ void PedsimSound::OnInitialize(const YAML::Node &config) {
   std::string sound_viz_topic_ = "sound_viz_" + std::to_string(source_id);
   marker_pub_ = nh_.advertise<visualization_msgs::Marker>(sound_viz_topic_, 1);
 
+  source_gain = reader.Get<float>("gain");
+  
   prepare_source_client_ = nh_.serviceClient<arena_sound_srvs::PrepareSource>("prepare_source");
   arena_sound_srvs::PrepareSource srv;
   srv.request.source_id = source_id;
   srv.request.pos_x = pos_x;
-  srv.request.pos_y = pos_y; 
+  srv.request.pos_y = pos_y;
+  srv.request.gain = source_gain; 
   ros::service::waitForService("prepare_source", 1000); 
   if (prepare_source_client_.call(srv))
   {
