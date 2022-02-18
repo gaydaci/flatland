@@ -75,7 +75,8 @@ void SoundPlugin::pedAgentsCallback(const pedsim_msgs::AgentStatesConstPtr& agen
     pedsim_msgs::AgentState p = agents_->agent_states[i];
     // ROS_INFO("SoundPlugin::pedAgentsCallback: Pedsim agent with id: %ld, state: %s and pos: %f, %f",
     //                                     p.id, p.social_state.c_str(), p.pose.position.x,p.pose.position.y);
-    if (p.social_state != "Walking" && p.social_state != "Running" && p.social_state != "Waiting") {
+    if (p.social_state != "Walking" && p.social_state != "Running" && p.social_state != "Waiting"
+          && p.social_state != "Driving") {
       ROS_INFO("SoundPlugin::pedAgentsCallback: Pedsim agent with id: %ld is %s!",
                                                   p.id, p.social_state.c_str());
     }

@@ -167,14 +167,14 @@ void PedsimSound::publishSoundVisuals(float pos_x, float pos_y, double volume) {
   q.setRPY(0, 0, body->GetPhysicsBody()->GetAngle());  // from euler angles: roll, pitch, yaw
   marker.pose.orientation = tf2::toMsg(q);
 
-  float volume_factor = 1.5f;
-  marker.scale.z = 1.0;
-  marker.scale.x = volume_factor*volume;
-  marker.scale.y = volume_factor*volume;
+  float volume_factor = 1.2f;
+  marker.scale.z = 0.5f;
+  marker.scale.x = volume_factor*volume + 0.5;
+  marker.scale.y = volume_factor*volume + 0.5;
 
   marker.color.r = 0.0f;
-  marker.color.b = volume_factor*volume;
-  marker.color.g = 0.0f;
+  marker.color.b = 0.5f;
+  marker.color.g = volume_factor*volume;
   marker.color.a = 0.5f;
 
   marker.lifetime = ros::Duration();
