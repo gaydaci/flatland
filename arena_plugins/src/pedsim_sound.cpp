@@ -34,18 +34,18 @@ void PedsimSound::OnInitialize(const YAML::Node &config) {
   started_playing=false;
   pedsim_agents_sub_ = nh_.subscribe("/pedsim_simulator/simulated_agents", 1, &PedsimSound::pedAgentsCallback, this);
 
-  std::string sound_viz_topic_ = "sound_viz_" + std::to_string(source_id);
+  std::string sound_viz_topic_ = "sound_visualization_" + std::to_string(source_id);
   marker_pub_ = nh_.advertise<visualization_msgs::Marker>(sound_viz_topic_, 1);
 
   source_gain = reader.Get<float>("gain");
   
-  prepare_source_client_ = nh_.serviceClient<arena_sound_srvs::PrepareSource>("prepare_source");
+  prepare_source_client_ = nh_.serviceClient<arena_sound_srvs::PrepareSource>("/sound_manager/prepare_source");
   arena_sound_srvs::PrepareSource srv;
   srv.request.source_id = source_id;
   srv.request.pos_x = pos_x;
   srv.request.pos_y = pos_y;
   srv.request.gain = source_gain; 
-  ros::service::waitForService("prepare_source", 1000); 
+  ros::service::waitForService("/sound_manager/prepare_source", 1000); 
   if (prepare_source_client_.call(srv))
   {
     // ROS_INFO("Prepared source with id %d", source_id);
@@ -64,13 +64,13 @@ void PedsimSound::BeforePhysicsStep(const Timekeeper &timekeeper) {
   float pos_y = body->GetPhysicsBody()->GetPosition().y;
   // ROS_INFO("SoundPlugin::BeforePhysicsStep\nSource Body's position is (%f, %f)\n", pos_x, pos_y);
   
-  update_source_position_client_ = nh_.serviceClient<arena_sound_srvs::UpdateSourcePos>("update_source_pos");
+  update_source_position_client_ = nh_.serviceClient<arena_sound_srvs::UpdateSourcePos>("/sound_manager/update_source_pos");
   arena_sound_srvs::UpdateSourcePos update_msg;
   update_msg.request.source_id = source_id;
   update_msg.request.pos_x = pos_x;
   update_msg.request.pos_y = pos_y;
 
-  ros::service::waitForService("update_source_pos", 1000);
+  ros::service::waitForService("/sound_manager/update_source_pos", 1000);
   if(update_source_position_client_.call(update_msg)) {
     // ROS_INFO("Source's position with ID %d updated", source_id);
   } else {
@@ -83,22 +83,22 @@ void PedsimSound::BeforePhysicsStep(const Timekeeper &timekeeper) {
     if(!started_playing) {
       curr_social_state = agent.social_state;
            
-      play_source_client_ = nh_.serviceClient<arena_sound_srvs::PlaySource>("play_source");
+      play_source_client_ = nh_.serviceClient<arena_sound_srvs::PlaySource>("/sound_manager/play_source");
       arena_sound_srvs::PlaySource play_msg;
       play_msg.request.source_id = source_id;
       // TODO buffer according to social state
       play_msg.request.social_state = curr_social_state;
 
-      ros::service::waitForService("play_source", 1000);
+      ros::service::waitForService("/sound_manager/play_source", 1000);
       if(play_source_client_.call(play_msg)) {
         started_playing = true;
 
-        get_source_volume_client_ = nh_.serviceClient<arena_sound_srvs::GetSourceVolume>("get_source_volume");
+        get_source_volume_client_ = nh_.serviceClient<arena_sound_srvs::GetSourceVolume>("/sound_manager/get_source_volume");
         arena_sound_srvs::GetSourceVolume vol_msg;
         vol_msg.request.source_id = source_id;
         vol_msg.request.social_state = curr_social_state;
 
-        ros::service::waitForService("get_source_volume", 1000);
+        ros::service::waitForService("/sound_manager/get_source_volume", 1000);
         get_source_volume_client_.call(vol_msg);
 
         publishSoundVisuals(pos_x, pos_y, vol_msg.response.volume);
@@ -118,7 +118,7 @@ void PedsimSound::BeforePhysicsStep(const Timekeeper &timekeeper) {
       while (!get_source_volume_client_.isValid()) {
         ROS_WARN("Reconnecting play_source_client-server...");
         get_source_volume_client_.waitForExistence(ros::Duration(1.0));
-        get_source_volume_client_ = nh_.serviceClient<arena_sound_srvs::PlaySource>("get_source_volume", true);
+        get_source_volume_client_ = nh_.serviceClient<arena_sound_srvs::PlaySource>("/sound_manager/get_source_volume", true);
       }
       get_source_volume_client_.call(vol_msg);
 
@@ -133,7 +133,7 @@ void PedsimSound::BeforePhysicsStep(const Timekeeper &timekeeper) {
         while (!play_source_client_.isValid()) {
           ROS_WARN("Reconnecting play_source_client-server...");
           play_source_client_.waitForExistence(ros::Duration(1.0));
-          play_source_client_ = nh_.serviceClient<arena_sound_srvs::PlaySource>("play_source", true);
+          play_source_client_ = nh_.serviceClient<arena_sound_srvs::PlaySource>("/sound_manager/play_source", true);
         }
         
         play_source_client_.call(play_msg);

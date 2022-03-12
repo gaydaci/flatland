@@ -25,12 +25,12 @@ void SoundPlugin::OnInitialize(const YAML::Node &config) {
   float pos_x = body->GetPhysicsBody()->GetPosition().x;
   float pos_y = body->GetPhysicsBody()->GetPosition().y;
 
-  update_listener_position_client_ = nh_.serviceClient<arena_sound_srvs::UpdateListenerPos>("update_listener_pos");
+  update_listener_position_client_ = nh_.serviceClient<arena_sound_srvs::UpdateListenerPos>("/sound_manager/update_listener_pos");
   arena_sound_srvs::UpdateListenerPos srv;
   srv.request.pos_x = pos_x;
   srv.request.pos_y = pos_y;
   
-  ros::service::waitForService("update_listener_pos", 1000);
+  ros::service::waitForService("/sound_manager/update_listener_pos", 1000);
   if (update_listener_position_client_.call(srv)) {
     ROS_INFO("Listener's position updated");
   } else {
@@ -48,7 +48,7 @@ void SoundPlugin::BeforePhysicsStep(const Timekeeper &timekeeper) {
   float pos_y = body->GetPhysicsBody()->GetPosition().y;
   // ROS_INFO("SoundPlugin::BeforePhysicsStep\n Listener Body's position is (%f, %f)\n", pos_x, pos_y);
   
-  update_listener_position_client_ = nh_.serviceClient<arena_sound_srvs::UpdateListenerPos>("update_listener_pos");
+  update_listener_position_client_ = nh_.serviceClient<arena_sound_srvs::UpdateListenerPos>("/sound_manager/update_listener_pos");
   arena_sound_srvs::UpdateListenerPos srv;
   srv.request.pos_x = pos_x;
   srv.request.pos_y = pos_y;
@@ -56,7 +56,7 @@ void SoundPlugin::BeforePhysicsStep(const Timekeeper &timekeeper) {
   while (!update_listener_position_client_.isValid()) {
     ROS_WARN("Reconnecting update_listener_position_client-server...");
     update_listener_position_client_.waitForExistence(ros::Duration(1.0));
-    update_listener_position_client_ = nh_.serviceClient<arena_sound_srvs::UpdateListenerPos>("update_listener_pos");
+    update_listener_position_client_ = nh_.serviceClient<arena_sound_srvs::UpdateListenerPos>("/sound_manager/update_listener_pos");
   }
 
   update_listener_position_client_.call(srv);
@@ -75,8 +75,7 @@ void SoundPlugin::pedAgentsCallback(const pedsim_msgs::AgentStatesConstPtr& agen
     pedsim_msgs::AgentState p = agents_->agent_states[i];
     // ROS_INFO("SoundPlugin::pedAgentsCallback: Pedsim agent with id: %ld, state: %s and pos: %f, %f",
     //                                     p.id, p.social_state.c_str(), p.pose.position.x,p.pose.position.y);
-    if (p.social_state != "Walking" && p.social_state != "Running" && p.social_state != "Waiting"
-          && p.social_state != "Driving") {
+    if (p.social_state != "Walking" && p.social_state != "Running" && p.social_state != "Waiting") {
       ROS_INFO("SoundPlugin::pedAgentsCallback: Pedsim agent with id: %ld is %s!",
                                                   p.id, p.social_state.c_str());
     }
